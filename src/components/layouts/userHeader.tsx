@@ -1,11 +1,13 @@
-import { useNavigate } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { Globe, User, ChevronDown } from "lucide-react";
 import { useState, useEffect } from "react";
 import Cookies from "js-cookie";
+import { useDispatch } from "react-redux";
+import { clearStudent } from "../../redux/slice/studentSlice";
 
 const navigation = [
   { name: "Home", href: "/" },
-  { name: "Courses", href: "/courses" },
+  { name: "Courses", href: "/course" },
   { name: "About Us", href: "/about" },
   { name: "Tutors", href: "/tutors" },
   { name: "Contact", href: "/contact" },
@@ -13,28 +15,27 @@ const navigation = [
 
 export function UserHeader() {
   const navigate = useNavigate();
+  const dispatch=useDispatch()
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isGoogleSignIn, setIsGoogleSignIn] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
-  // Check if the user is logged in (either through normal login or Google login)
   const checkAuthStatus = () => {
-    const userToken = Cookies.get("userToken"); // Check for normal login
-    const googleAuth = localStorage.getItem("googleAuth"); // Check Google Sign-In status
-    console.log(googleAuth,"google")
+    const userToken = Cookies.get("userToken");
+    const googleAuth = localStorage.getItem("googleAuth");
+    console.log(googleAuth, "google");
     setIsLoggedIn(!!userToken);
     setIsGoogleSignIn(!!googleAuth);
 
-    // Navigate to home page if user is logged in
-    if (userToken || googleAuth) {
-      navigate("/");
-    }
+    // Removed forced navigation to "/" to allow other pages to render
+    // if (userToken || googleAuth) {
+    //   navigate("/");
+    // }
   };
 
   useEffect(() => {
-    checkAuthStatus(); // Initial authentication check
+    checkAuthStatus();
 
-    // Listen for storage changes (for Google Auth updates)
     const handleStorageChange = () => checkAuthStatus();
     window.addEventListener("storage", handleStorageChange);
 
@@ -43,10 +44,10 @@ export function UserHeader() {
     };
   }, []);
 
-  // Handle Logout
   const handleLogout = () => {
     Cookies.remove("userToken");
-    localStorage.removeItem("googleAuth"); 
+    dispatch(clearStudent())
+    localStorage.removeItem("googleAuth");
     setIsLoggedIn(false);
     setIsGoogleSignIn(false);
     setDropdownOpen(false);
@@ -58,27 +59,31 @@ export function UserHeader() {
       <div className="container mx-auto px-20">
         <div className="flex h-20 items-center justify-between">
           {/* Logo */}
-          <div
+          <NavLink
+            to="/"
             className="flex items-center gap-2 cursor-pointer"
-            onClick={() => navigate("/")}
           >
             <img
               src="/src/assets/Logo.png"
               alt="Lingua Logo"
               className="h-20 w-20"
             />
-          </div>
+          </NavLink>
 
           {/* Navigation Links */}
           <nav className="hidden md:flex items-center gap-8">
             {navigation.map((item) => (
-              <div
+              <NavLink
                 key={item.name}
-                onClick={() => navigate(item.href)}
-                className="text-sm font-medium text-white hover:text-white cursor-pointer"
+                to={item.href}
+                className={({ isActive }) =>
+                  `text-sm font-medium text-white cursor-pointer ${
+                    isActive ? "underline" : "hover:text-gray-200"
+                  }`
+                }
               >
                 {item.name}
-              </div>
+              </NavLink>
             ))}
           </nav>
 
@@ -103,7 +108,7 @@ export function UserHeader() {
                   className="bg-red-500 px-4 py-2 rounded-md hover:bg-red-600"
                   onClick={() => navigate("/register")}
                 >
-                  Sign Up
+                  Sign U
                 </button>
               </>
             ) : (
@@ -119,15 +124,29 @@ export function UserHeader() {
                 {dropdownOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-300 shadow-lg rounded-lg z-50">
                     <div className="flex flex-col">
-                      <button
-                        className="px-4 py-2 text-left hover:bg-gray-100"
-                        onClick={() => {
-                          navigate("/getProfile");
-                          setDropdownOpen(false);
-                        }}
+                      <NavLink
+                        to="/getProfile"
+                        className={({ isActive }) =>
+                          `px-4 py-2 text-left hover:bg-gray-100 ${
+                            isActive ? "bg-gray-100" : ""
+                          }`
+                        }
+                        onClick={() => setDropdownOpen(false)}
                       >
                         Profile
-                      </button>
+                      </NavLink>
+
+                      <NavLink
+                        to="/wallet"
+                        className={({ isActive }) =>
+                          `px-4 py-2 text-left hover:bg-gray-100 ${
+                            isActive ? "bg-gray-100" : ""
+                          }`
+                        }
+                        onClick={() => setDropdownOpen(false)}
+                      >
+                        Wallet
+                      </NavLink>
                       <button
                         className="px-4 py-2 text-left hover:bg-gray-100"
                         onClick={handleLogout}

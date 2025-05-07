@@ -1,25 +1,31 @@
 import { TUTOR_URL } from "../constant/url";
 import axios from 'axios'
 import Cookies from "js-cookie";
-import { useNavigate } from "react-router";
+import toast from "react-hot-toast";
+import store from "../redux/store";
+import { clearState } from "../redux/slice/tutorSlice";
 
 const tutorAPI = axios.create({
     baseURL: TUTOR_URL,
     withCredentials: true,
 })
 
-const getToken = () => Cookies.get("accessToken");
+const getToken = () => {
+  return Cookies.get("tutorToken")
+
+};
 
 
 const clearCookies = () => {
-  Cookies.remove("accessToken", { path: "/" });
+  Cookies.remove("tutorToken", { path: "/" });
   Cookies.remove("refreshToken", { path: "/" });
 };
 
 
 tutorAPI.interceptors.request.use(
   (config) => {
-    const token = getToken();
+    const token= getToken();
+   
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -38,11 +44,11 @@ tutorAPI.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       try {
-        
-        const res = await tutorAPI.post("/refresh-token");
+        const refreshToken=Cookies.get('refreshToken')
+        const res = await tutorAPI.post("/refresh-token",   { headers: { Authorization: `Bearer ${refreshToken}` },});
 
         
-        Cookies.set("accessToken", res.data.accessToken, { path: "/" });
+        Cookies.set("tutorToken", res.data.accessToken, { path: "/" });
 
        
         originalRequest.headers.Authorization = `Bearer ${res.data.accessToken}`;
@@ -52,11 +58,20 @@ tutorAPI.interceptors.response.use(
 
      
         clearCookies();
+        store.dispatch(clearState())
         // window.location.href = "/tutor/login";
         return Promise.reject(refreshError);
       }
     }
 
+    if (error.response?.status === 403) {
+          console.warn("tutor is blocked. Logging out...");
+          toast.error('tutor is blocked')
+          clearCookies();
+        store.dispatch(clearState())
+          window.location.href = "/tutor/login"; 
+          return Promise.reject(new Error("tutor is blocked"));
+        }
     
     return Promise.reject(error);
   }

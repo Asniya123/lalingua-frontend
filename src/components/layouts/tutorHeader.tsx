@@ -1,135 +1,106 @@
-import { ReactNode, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { Button } from "../../components/admin/button";
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import { clearState } from '../../redux/slice/tutorSlice';
+import { RootState } from '../../redux/store';
+import Tutor from '../../interfaces/tutor';
+import { FaTimes } from 'react-icons/fa';
 
-interface TutorLayoutProps {
-  children: ReactNode;
+interface TutorSidebarProps {
+  onNavClick?: (path: string) => void; 
 }
 
-const TutorLayout: React.FC<TutorLayoutProps> = ({ children }) => {
+const TutorSidebar: React.FC<TutorSidebarProps> = ({ onNavClick }) => {
   const navigate = useNavigate();
-  const location = useLocation();
-  const [dropDown, setDropDown] = useState(false);
+  const dispatch = useDispatch();
+  const tutor = useSelector((state: RootState) => state.tutor.tutor) as Tutor | null; 
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
 
-  const getTitle = () => {
-    if (location.pathname.includes("/tutor/users")) return "Manage Users";
-    if (location.pathname.includes("/admin/course")) return "Add Category";
-    if (location.pathname.includes("/admin/addCourse")) return "Add Course";
-    if (location.pathname.includes("/admin/reports")) return "Reports";
-    if (location.pathname.includes("/admin/settings")) return "Settings";
-    return "Admin Dashboard";
+  const handleLogout = () => {
+    dispatch(clearState());
+    navigate('/tutor/login');
+  };
+
+  const handleNavClick = (path: string) => {
+    if (onNavClick) {
+      onNavClick(path);
+    }
+    navigate(path);
+    setIsMobileOpen(false); 
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      {/* Navbar */}
-      <nav className="bg-orange-500 p-4 shadow-md">
-        <div className="container mx-auto flex justify-between items-center">
-          <div className="text-white text-2xl font-bold">{getTitle()}</div>
-          <Button onClick={() => console.log("Logout logic here")} className="bg-white text-orange-500">
-            Logout
-          </Button>
+    <div
+      className={`w-64 bg-gray-800 shadow-lg p-4 rounded-lg transition-transform duration-300 ease-in-out ${
+        isMobileOpen ? 'fixed inset-y-0 left-0 z-50 transform translate-x-0' : 'hidden md:block md:transform md:translate-x-0'
+      }`}
+    >
+      
+      <button
+        onClick={() => setIsMobileOpen(false)}
+        className="absolute top-4 right-4 text-white p-2 rounded-lg hover:bg-gray-700 md:hidden"
+      >
+        <FaTimes size={24} />
+      </button>
+
+      <div className="mb-6">
+        <div className="flex items-center">
+          {tutor?.profilePicture && (
+            <img
+              src={tutor.profilePicture}
+              alt="Tutor Profile"
+              className="rounded-full w-12 h-12 mr-3"
+            />
+          )}
+          <span className="text-white font-medium">{tutor?.name || 'Tutor Name'}</span>
         </div>
+      </div>
+
+      <nav className="space-y-4">
+        <button
+          onClick={() => handleNavClick('/tutor/home')}
+          className="w-full text-left px-4 py-3 bg-blue-600 rounded-lg text-white hover:bg-blue-700 transition"
+        >
+          Dashboard
+        </button>
+        <button
+          onClick={() => handleNavClick('/tutor/getprofile')}
+          className="w-full text-left px-4 py-3 bg-green-600 rounded-lg text-white hover:bg-green-700 transition"
+        >
+          Profile
+        </button>
+        <button
+          onClick={() => handleNavClick('/tutor/listCourse')}
+          className="w-full text-left px-4 py-3 bg-yellow-600 rounded-lg text-white hover:bg-yellow-700 transition"
+        >
+          Courses
+        </button>
+      
+        <button
+          onClick={() => handleNavClick('/tutor/chatPage')}
+          className="w-full text-left px-4 py-3 bg-yellow-600 rounded-lg text-white hover:bg-yellow-700 transition"
+        >
+          Chat
+        </button>
+        
+        
+        <button
+          onClick={handleLogout}
+          className="w-full text-left px-4 py-3 bg-gray-600 rounded-lg text-white hover:bg-gray-700 transition"
+        >
+          Logout
+        </button>
       </nav>
 
-      {/* Sidebar + Content */}
-      <div className="flex">
-        {/* Sidebar */}
-        <aside className="w-1/4 bg-white shadow-lg h-screen p-6">
-          <ul className="space-y-4">
-            <li>
-              <button
-                onClick={() => navigate("/tutor/home")}
-                className="w-full text-left text-orange-500 hover:text-orange-600 font-semibold"
-              >
-                Dashboard
-              </button>
-            </li>
-            <li>
-              <button
-                onClick={() => navigate("/tutor/addCourse")}
-                className="w-full text-left text-orange-500 hover:text-orange-600 font-semibold"
-              >
-                AddCourse
-              </button>
-            </li>
-
-            {/* Dropdown Section */}
-            <li className="relative">
-              <button
-                className="w-full text-left text-orange-500 hover:text-orange-600 font-semibold"
-                onClick={() => setDropDown(!dropDown)}
-              >
-                Manage Tutors 
-              </button>
-
-              {dropDown && (
-                <div className="absolute left-0 mt-2 w-48 bg-white border border-gray-300 shadow-lg rounded-lg z-50">
-                  <div className="flex flex-col">
-                    <button
-                      className="px-4 py-2 text-left hover:bg-gray-100"
-                      onClick={() => {
-                        navigate("/admin/tutorList");
-                        setDropDown(false);
-                      }}
-                    >
-                      Tutor List
-                    </button>
-                    <button
-                      className="px-4 py-2 text-left hover:bg-gray-100"
-                      onClick={() => {
-                        navigate("/admin/tutorManging");
-                        setDropDown(false);
-                      }}
-                    >
-                      Tutor Managing
-                    </button>
-                  </div>
-                </div>
-              )}
-            </li>
-
-            <li>
-              <button
-                onClick={() => navigate("/admin/listCategory")}
-                className="w-full text-left text-orange-500 hover:text-orange-600 font-semibold"
-              >
-                Category
-              </button>
-            </li>
-            
-            <li>
-              <button
-                onClick={() => navigate("/admin/addCourse")}
-                className="w-full text-left text-orange-500 hover:text-orange-600 font-semibold"
-              >
-                Course
-              </button>
-            </li>
-            <li>
-              <button
-                onClick={() => navigate("/admin/reports")}
-                className="w-full text-left text-orange-500 hover:text-orange-600 font-semibold"
-              >
-                Reports
-              </button>
-            </li>
-            <li>
-              <button
-                onClick={() => navigate("/admin/settings")}
-                className="w-full text-left text-orange-500 hover:text-orange-600 font-semibold"
-              >
-                Settings
-              </button>
-            </li>
-          </ul>
-        </aside>
-
-        {/* Main Content */}
-        <main className="flex-1 p-6">{children}</main>
-      </div>
+      {/* Overlay for mobile (to close sidebar when clicking outside) */}
+      {isMobileOpen && (
+        <div
+          onClick={() => setIsMobileOpen(false)}
+          className="fixed inset-0 bg-black bg-opacity-50 md:hidden"
+        />
+      )}
     </div>
   );
 };
 
-export default TutorLayout
+export default TutorSidebar;

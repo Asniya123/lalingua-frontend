@@ -1,6 +1,5 @@
 import React, { ReactNode } from "react";
 
-// Define types for the props
 interface AvatarProps {
   children: ReactNode;
   className?: string;
@@ -37,10 +36,7 @@ export const AvatarImage: React.FC<AvatarImageProps> = ({ src, alt, className = 
   );
 };
 
-export const AvatarFallback: React.FC<AvatarFallbackProps> = ({
-  children,
-  className = "",
-}) => {
+export const AvatarFallback: React.FC<AvatarFallbackProps> = ({ children, className = "" }) => {
   return (
     <div
       className={`flex items-center justify-center bg-gray-400 text-white ${className}`}

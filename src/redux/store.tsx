@@ -1,40 +1,39 @@
+
 import { configureStore, combineReducers } from "@reduxjs/toolkit";
 import { persistStore, persistReducer } from "redux-persist";
 import storage from "redux-persist/lib/storage";
-import adminReducer from "./slice/adminSlice";
-import authReducer from "./slice/studentSlice";
-import tutorReducer from "./slice/tutorSlice";
+import adminReducer from "./slice/adminSlice.js";
+import authReducer from "./slice/studentSlice.js";
+import tutorReducer from "./slice/tutorSlice.js";
+import { useDispatch } from "react-redux";
 
-// Combine all reducers
 const rootReducer = combineReducers({
   admin: adminReducer,
   auth: authReducer,
   tutor: tutorReducer,
 });
 
-// Persist config
 const persistConfig = {
   key: "root",
   storage,
-  whitelist: ["auth", "admin", "tutor"], // Only these slices will be persisted
+  whitelist: ["auth", "admin", "tutor"],
 };
 
-// Persisted root reducer
 const persistedReducer = persistReducer(persistConfig, rootReducer);
 
-// Store setup
-const store = configureStore({
-  reducer: persistedReducer,  
+export const store = configureStore({
+  reducer: persistedReducer,
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
-      serializableCheck: false,  
+      serializableCheck: false,
     }),
 });
 
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;
 
-// Persistor
+export const useAppDispatch: () => AppDispatch = useDispatch;
+
 export const persistor = persistStore(store);
 
 export default store;

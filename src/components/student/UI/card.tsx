@@ -7,7 +7,6 @@ interface CardProps {
 
 const Card: React.FC<CardProps> = ({ children, className = "" }) => {
   const baseStyles = "shadow-lg rounded-lg bg-white p-6";
-
   return <div className={`${baseStyles} ${className}`}>{children}</div>;
 };
 
@@ -20,4 +19,13 @@ const CardContent: React.FC<CardContentProps> = ({ children, className = "" }) =
   return <div className={`p-4 ${className}`}>{children}</div>;
 };
 
-export { Card, CardContent };
+
+interface CardHeaderProps {
+  children: React.ReactNode;
+}
+
+const CardHeader: React.FC<CardHeaderProps> = ({ children }) => {
+  return <div className="border-b pb-2 mb-4">{children}</div>;
+};
+
+export { Card, CardContent, CardHeader };

@@ -3,15 +3,15 @@ import { useState } from "react";
 import AdminLayout from "../../components/layouts/adminHeader";
 
 export default function AdminDashboard() {
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
 
   const [dropDown, setDropDown] = useState(false);
 
-  const handleLogout = () => {
-    // Clear admin data and navigate to login
-    localStorage.clear();
-    navigate("/admin/login");
-  };
+  // const handleLogout = () => {
+  //   // Clear admin data and navigate to login
+  //   localStorage.clear();
+  //   navigate("/admin/login");
+  // };
 
   return (
     <AdminLayout>

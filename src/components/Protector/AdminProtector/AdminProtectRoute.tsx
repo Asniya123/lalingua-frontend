@@ -1,6 +1,6 @@
 import { Navigate, Outlet } from "react-router-dom";
 import { useSelector } from "react-redux";
-import { RootState } from "../redux/store"; 
+import { RootState } from "../../../redux/store"; 
 const AdminProtectedRoute = () => {
   const admin = useSelector((state: RootState) => state.admin.adminId);
   console.log(admin)

@@ -1,6 +1,11 @@
 import { ReactNode, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "../../components/admin/button";
+import { useDispatch, useSelector } from "react-redux"; 
+import { RootState } from "../../redux/store"; 
+import { clearAdminData } from "../../redux/slice/adminSlice"; 
+import adminAPI from "../../api/adminInstance";
+import Cookies from "js-cookie"; 
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -9,17 +14,53 @@ interface AdminLayoutProps {
 const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const dispatch = useDispatch(); 
   const [dropDown, setDropDown] = useState(false);
+  const admin = useSelector((state: RootState) => state.admin);
 
   const getTitle = () => {
     if (location.pathname.includes("/admin/users")) return "Manage Users";
     if (location.pathname.includes("/admin/categories")) return "Add Category";
     if (location.pathname.includes("/admin/listCategory")) return "List Category";
     if (location.pathname.includes("/admin/category/edit")) return "Edit Category";
-    if (location.pathname.includes("/admin/addCourse")) return "Add Course";
+    if (location.pathname.includes("/admin/languages")) return "Add Language";
+    if (location.pathname.includes("/admin/tutorList")) return "Tutor List";
+    if (location.pathname.includes("/admin/tutorManaging")) return "Tutor Managing";
+    if (location.pathname.includes("/admin/courseManaging")) return "Course Managing";
     if (location.pathname.includes("/admin/reports")) return "Reports";
     if (location.pathname.includes("/admin/settings")) return "Settings";
     return "Admin Dashboard";
+  };
+
+  const handleLogout = async () => {
+    try {
+      if (admin.accessToken) {
+        await adminAPI.post("/logout", {}, {
+          headers: {
+            Authorization: `Bearer ${admin.accessToken}`,
+          },
+        });
+      }
+
+      // Clear Redux state
+      dispatch(clearAdminData());
+
+      // Clear cookies manually (as a fallback, since clearAdminData already does this)
+      Cookies.remove("adminId", { path: "/" });
+      Cookies.remove("accessToken", { path: "/" });
+      Cookies.remove("refreshToken", { path: "/" });
+
+      // Navigate to login page
+      navigate("/admin/login");
+    } catch (error) {
+      console.error("Logout failed:", error);
+      // Fallback: Clear state and cookies even if API call fails
+      dispatch(clearAdminData());
+      Cookies.remove("adminId", { path: "/" });
+      Cookies.remove("accessToken", { path: "/" });
+      Cookies.remove("refreshToken", { path: "/" });
+      navigate("/admin/login");
+    }
   };
 
   return (
@@ -28,7 +69,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
       <nav className="bg-orange-500 p-4 shadow-md">
         <div className="container mx-auto flex justify-between items-center">
           <div className="text-white text-2xl font-bold">{getTitle()}</div>
-          <Button onClick={() => console.log("Logout logic here")} className="bg-white text-orange-500">
+          <Button onClick={handleLogout} className="bg-white text-orange-500 hover:bg-orange-100">
             Logout
           </Button>
         </div>
@@ -99,15 +140,26 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
                 Category
               </button>
             </li>
-            
+
             <li>
               <button
-                onClick={() => navigate("/admin/addCourse")}
+                onClick={() => navigate("/admin/listLanguage")}
                 className="w-full text-left text-orange-500 hover:text-orange-600 font-semibold"
               >
-                Course
+                Language
               </button>
             </li>
+            
+
+            <li>
+              <button
+                onClick={() => navigate("/admin/course")}
+                className="w-full text-left text-orange-500 hover:text-orange-600 font-semibold"
+              >
+                Course Managing
+              </button>
+            </li>
+           
             <li>
               <button
                 onClick={() => navigate("/admin/reports")}

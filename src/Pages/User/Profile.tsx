@@ -1,4 +1,4 @@
-import Profile from '../../components/student/StudentProfile';
+import Profile from '../../components/student/Profile/StudentProfile.js';
 import React from 'react';
 
 

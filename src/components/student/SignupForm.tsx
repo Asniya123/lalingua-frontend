@@ -40,6 +40,8 @@ const Signup: React.FC = () => {
       .required('Confirm password is required'),
   });
 
+  
+
   const handleOtpChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setOtp(e.target.value);
   };

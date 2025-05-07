@@ -1,4 +1,4 @@
-import EditProfile from '../../components/student/EditProfile'
+import EditProfile from '../../components/student/Profile/EditProfile'
 
 const StudentEditProfile: React.FC = () => {
   return (

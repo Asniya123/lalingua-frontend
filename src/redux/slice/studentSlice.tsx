@@ -1,9 +1,9 @@
-import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-import * as service from '../../services/userAuth';
+import { createAsyncThunk, createSlice, isRejectedWithValue } from "@reduxjs/toolkit";
+import * as service from '../../services/userAuth.js';
 import Cookies from "js-cookie";
-import Student, { Login } from '../../interfaces/user';
-import { updateProfile } from "../../services/userAuth";
-import axios from '../../api/axiosInstance';
+import Student, { Login } from '../../interfaces/user.js';
+import ImageUpload from "../../utils/Cloudinary.js";
+import API from "../../api/axiosInstance.js";
 
 const userString = Cookies.get('user');
 const student: Student | null = userString ? JSON.parse(userString) : null;
@@ -16,6 +16,8 @@ const initialState = {
   isSuccess: false,
   isLoading: false,
   message: '',
+  updateSuccess: false,
+  selectedLanguageId: null as string | null,
 };
 
 export const register = createAsyncThunk<Student, Student, { rejectValue: string }>(
@@ -70,7 +72,7 @@ export const fetchStudentProfile = createAsyncThunk(
   "student/fetchProfile",
   async (token: string, { rejectWithValue }) => {
     try {
-      const response = await axios.get("/getProfile", {
+      const response = await API.get("/getProfile", {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -85,19 +87,39 @@ export const fetchStudentProfile = createAsyncThunk(
 );
 
 export const updateStudentProfile = createAsyncThunk<Student, { token: string; profileData: Partial<Student> }, { rejectValue: string }>(
-  "auth/updateProfile",
+  "student/updateProfile",
   async ({ token, profileData }, { rejectWithValue }) => {
     try {
-      const updateData = await updateProfile(token, profileData);
-      return updateData;
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-        return rejectWithValue(error.message);
-      }
-      return rejectWithValue("An unknown error occurred");
+      const response = await API.put("/editProfile", profileData, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return response.data.student;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'An unknown error occurred');
     }
   }
 );
+
+
+export const uploadProfilePicture = createAsyncThunk<Student, { token: string; file: File }, { rejectValue: string}>(
+  'student/uploadProfilePicture',
+  async({token, file}, {rejectWithValue}) => {
+    try{
+      const uploadedImageUrl = await ImageUpload(file)
+
+      const response = await API.put('/uploadPicture',
+        {profilePicture: uploadedImageUrl},
+        {
+          headers: {Authorization: `Bearer ${token}`},
+        }
+      )
+      return response.data.student
+    }catch(error: any){
+      return rejectWithValue(error.response?.data?.message || 'An unkonwn error occured')
+    }
+  }
+)
+
 
 const authSlice = createSlice({
   name: 'auth',
@@ -109,8 +131,22 @@ const authSlice = createSlice({
       state.isSuccess = false;
       state.message = action.payload as string;
     },
+    setStudent:(state,action)=>{
+      state.student=action.payload
+    },
     clearError: (state) => {
       state.error = null;
+    },
+    clearStudent: (state) => {
+      state.student = null;
+    },
+    setLanguage: (state, action) => { 
+      state.selectedLanguageId = action.payload;
+      Cookies.set('selectedLanguageId', action.payload); 
+    },
+    clearLanguage: (state) => { 
+      state.selectedLanguageId = null;
+      Cookies.remove('selectedLanguageId');
     },
   },
   extraReducers: (builder) => {
@@ -162,12 +198,14 @@ const authSlice = createSlice({
       })
       .addCase(logout.fulfilled, (state) => {
         state.student = null;
+        state.selectedLanguageId = null; 
+        Cookies.remove('selectedLanguageId');
       })
       .addCase(fetchStudentProfile.pending, (state) => {
-        state.loading = true;
         state.error = null;
       })
       .addCase(fetchStudentProfile.fulfilled, (state, action) => {
+        console.log(action)
         state.loading = false;
         state.student = action.payload;
       })
@@ -182,13 +220,27 @@ const authSlice = createSlice({
       .addCase(updateStudentProfile.fulfilled, (state, action) => {
         state.loading = false;
         state.student = action.payload;
+        state.updateSuccess = true
       })
       .addCase(updateStudentProfile.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
-      });
+      })
+      .addCase(uploadProfilePicture.pending, (state) => {
+        state.loading = true
+        state.error = null
+      })
+      .addCase(uploadProfilePicture.fulfilled, (state, action) => {
+        state.loading = false
+        state.student = action.payload
+        state.updateSuccess = true
+      })
+      .addCase(uploadProfilePicture.rejected, (state, action) => {
+        state.loading = false
+        state.error = action.payload as string
+      })
   },
 });
 
-export const { reset, clearError } = authSlice.actions;
+export const { reset, clearError,setStudent,clearStudent,setLanguage, clearLanguage} = authSlice.actions;
 export default authSlice.reducer;

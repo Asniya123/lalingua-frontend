@@ -1,31 +1,64 @@
 import React from 'react';
 
 interface ButtonProps {
-  children: React.ReactNode; // Explicitly typing children as ReactNode
+  children: React.ReactNode;
   className?: string;
-  variant?: "outline" | "filled"; // You can specify the valid variants
-  size?: "sm" | "lg"; // You can specify the valid sizes
-  onClick: React.MouseEventHandler<HTMLButtonElement>; // Typing onClick handler
-  type?: "button" | "submit" | "reset"; // Typing the type prop, defaults to "button"
+  variant?: 'outline' | 'filled' | 'default' | 'light';
+  size?: 'sm' | 'lg';
+  onClick?: React.MouseEventHandler<HTMLButtonElement>;
+  type?: 'button' | 'submit' | 'reset';
+  disabled?: boolean;
+  isIconOnly?: boolean;  
+  color?: 'primary' | 'secondary' | 'danger';
 }
 
 const Button: React.FC<ButtonProps> = ({
   children,
   className = '',
-  variant = 'filled', // default value for variant
-  size = 'sm', // default value for size
+  variant = 'filled',
+  size = 'sm',
   onClick,
-  type = "button",
+  type = 'button',
+  disabled = false,
+  isIconOnly = false,
+  color = 'primary',
 }) => {
-  const baseStyles = "px-4 py-2 rounded-md focus:outline-none";
-  const variantStyles = variant === "outline" ? "border border-gray-300" : "bg-blue-600 text-white";
-  const sizeStyles = size === "lg" ? "text-lg" : "text-sm";
+  const baseStyles = 'rounded-md focus:outline-none transition-colors duration-200';
+
+  const variantStyles = {
+    filled: {
+      primary: 'bg-blue-600 text-white hover:bg-blue-700',
+      secondary: 'bg-gray-600 text-white hover:bg-gray-700',
+      danger: 'bg-red-600 text-white hover:bg-red-700',
+    },
+    light: {
+      primary: 'bg-blue-100 text-blue-700 hover:bg-blue-200',
+      secondary: 'bg-gray-100 text-gray-700 hover:bg-gray-200',
+      danger: 'bg-red-100 text-red-700 hover:bg-red-200',
+    },
+    outline: {
+      primary: 'border border-blue-600 text-blue-600 hover:bg-blue-50',
+      secondary: 'border border-gray-600 text-gray-600 hover:bg-gray-50',
+      danger: 'border border-red-600 text-red-600 hover:bg-red-50',
+    },
+    default: {
+      primary: 'bg-gray-200 text-gray-800 hover:bg-gray-300',
+      secondary: 'bg-gray-200 text-gray-800 hover:bg-gray-300',
+      danger: 'bg-gray-200 text-gray-800 hover:bg-gray-300',
+    },
+  };
+
+  const selectedVariant = variantStyles[variant]?.[color] || '';
+  const sizeStyles = size === 'lg' ? 'text-lg px-5 py-3' : 'text-sm px-3 py-2';
+  const disabledStyles = disabled ? 'opacity-50 cursor-not-allowed' : '';
+  const iconOnlyStyles = isIconOnly ? 'p-2' : '';
 
   return (
     <button
       type={type}
       onClick={onClick}
-      className={`${baseStyles} ${variantStyles} ${sizeStyles} ${className}`}
+      disabled={disabled}
+      className={`${baseStyles} ${selectedVariant} ${sizeStyles} ${iconOnlyStyles} ${disabledStyles} ${className}`}
     >
       {children}
     </button>

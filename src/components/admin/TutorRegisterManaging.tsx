@@ -10,6 +10,7 @@ import {
   Input,
 } from "@heroui/react";
 import { getTutorsApproveOrReject, updateTutorStatus } from "../../services/adminAuth";
+import AdminLayout from "../layouts/adminHeader";
 
 interface Tutor {
   status: string;
@@ -79,6 +80,7 @@ const TutorRegisterManaging = () => {
   };
 
   return (
+    <AdminLayout>
     <div className="max-w-4xl mx-auto mt-10">
       <h2 className="text-2xl font-semibold mb-4 text-center">Tutor Management</h2>
       {error && <p className="text-center text-red-500">{error}</p>}
@@ -175,6 +177,7 @@ const TutorRegisterManaging = () => {
         </ModalContent>
       </Modal>
     </div>
+    </AdminLayout>
   );
 };
 

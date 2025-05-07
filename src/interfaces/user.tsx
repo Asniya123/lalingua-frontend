@@ -1,4 +1,9 @@
+import { Icategory } from "./admin";
+import Tutor from "./tutor";
+
 export default interface Student {
+    id: any;
+    success: any;
     _id?: string;
     name?: string;
     email?: string;
@@ -7,8 +12,10 @@ export default interface Student {
     confirmPassword?: string;
     is_verified?: boolean;
     language?: string;
-    profileImage?: string | File | null
+    profilePicture?: string | File | null
   }
+
+
 
 export interface Login {
     email: string;
@@ -24,4 +31,62 @@ export interface ResetPassword {
   otp?: string;
   newPassword: string;
   confirmPassword: string;
+}
+
+
+export interface ILessonPreview {
+  _id: string;
+  title: string;
+  description: string;
+  introVideoUrl?: string;
+  videoUrl?: string;
+}
+
+export interface ICourse {
+  _id: string; 
+  courseTitle: string;
+  imageUrl: string;
+  description: string;
+  regularPrice: number;
+  category: string | { _id: string; name?: string }; 
+  buyCount?: number;
+  learningObjectives: string[];
+  language?: string | { _id: string; name?: string }; 
+  isBlock?: boolean;
+  lessons?: ILessonPreview[];
+  enrolledStudents?: string[];
+  tutor?: Tutor | undefined;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+export  interface ILesson {
+  _id?: string;
+  title: string;
+  description: string;
+  videoUrl?: string;
+  courseId: string;
+  introVideoUrl?: string
+}
+export interface OrderRequest {
+  paymentMethod:  "onlinePayment";
+  retryTotal?: number;
+  amount?: number;
+  paymentStatus?: "success" | "failed";
+}
+
+export interface RazorpayOrderResponse {
+  success: boolean;
+  order?: {
+    id: string;
+    amount: number;
+    currency: string;
+  };
+  error?: string;
+}
+
+export interface OrderResponse {
+  success: boolean;
+  message?: string;
+  error?: string;
 }

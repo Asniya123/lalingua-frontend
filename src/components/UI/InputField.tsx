@@ -1,37 +1,43 @@
-import React from 'react';
+import React, { forwardRef } from "react"; 
 
 interface InputProps {
-  id: string;  // id should be a string
-  type: string;  // type should be a string
-  placeholder: string;  // placeholder should be a string
-  className?: string;  // className is optional, type is string
-  autoComplete?: string;  // autoComplete is optional, type is string
-  autoCorrect?: string;  // autoCorrect is optional, type is string
-  autoCapitalize?: string;  // autoCapitalize is optional, type is string
+  id?: string;
+  label?: string;
+  type: string;
+  value: string;
+  onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  placeholder?: string;
+  className?: string;
+  disabled?: boolean;
+  readOnly?: boolean;
+  size?: "sm" | "md" | "lg"; 
 }
 
-const Input: React.FC<InputProps> = ({
-  id,
-  type,
-  placeholder,
-  className = '',
-  autoComplete,
-  autoCorrect,
-  autoCapitalize,
-}) => {
-  const baseStyles = "border rounded-md p-2 w-full";
+const Input = forwardRef<HTMLInputElement, InputProps>(
+  ({ id, type, value, onChange, placeholder = "", className = "", disabled = false, readOnly = false, size = "md" }: InputProps, ref) => {
+    const baseStyles = "w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#8B5252]";
+    const disabledStyles = disabled ? "opacity-50 cursor-not-allowed" : "";
 
-  return (
-    <input
-      id={id}
-      type={type}
-      placeholder={placeholder}
-      className={`${baseStyles} ${className}`}
-      autoComplete={autoComplete}
-      autoCorrect={autoCorrect}
-      autoCapitalize={autoCapitalize}
-    />
-  );
-};
+    const sizeStyles = {
+      sm: "text-sm p-1",  
+      md: "text-base p-2", 
+      lg: "text-lg p-3",  
+    };
+
+    return (
+      <input
+        ref={ref}
+        id={id}
+        type={type}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        className={`${baseStyles} ${sizeStyles[size]} ${disabledStyles} ${className}`}
+        disabled={disabled}
+        readOnly={readOnly}
+      />
+    );
+  }
+);
 
 export { Input };

@@ -69,23 +69,7 @@ const Signup: React.FC = () => {
     setOtp(e.target.value);
   };
 
-  // const handleSubmit = async (e: React.FormEvent) => {
-  //   e.preventDefault();
-  //   setError(null);
-
-  //   const { name, email, mobile, password, confirmPassword } = formData;
-
-
-
-  //   try {
-  //     await signupTutor({ name, email, mobile, password });
-  //     setIsOtpSent(true);
-  //     setTimer(30); 
-  //     alert('OTP sent to your email. Please verify.');
-  //   } catch (err: any) {
-  //     setError(err.message);
-  //   }
-  // };
+  
 
   const handleOtpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -171,7 +155,7 @@ const Signup: React.FC = () => {
                   }
                   await signupTutor(formDatas);
                   setIsOtpSent(true);
-                  alert('OTP sent to your email. Please verify.');
+                  toast.success('Otp send your mail')
                 } catch (err: any) {
                   setError(err.message);
                 }

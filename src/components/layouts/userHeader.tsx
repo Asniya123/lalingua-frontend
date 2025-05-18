@@ -147,6 +147,18 @@ export function UserHeader() {
                       >
                         Wallet
                       </NavLink>
+
+                      <NavLink
+                        to="/purchaseHistory"
+                        className={({ isActive }) =>
+                          `px-4 py-2 text-left hover:bg-gray-100 ${
+                            isActive ? "bg-gray-100" : ""
+                          }`
+                        }
+                        onClick={() => setDropdownOpen(false)}
+                      >
+                        Order
+                      </NavLink>
                       <button
                         className="px-4 py-2 text-left hover:bg-gray-100"
                         onClick={handleLogout}

@@ -9,17 +9,18 @@ export const fetch_contacts = async (userId: string | undefined, searchTerm: str
     }
 };
 
-export const fetch_room = async (recieverId: string, senderId: string | undefined) => {
+export const fetch_room = async (receiverId: string, senderId: string | undefined) => {
     try {
-        if (!senderId || !recieverId) {
+        if (!senderId || !receiverId) {
             throw new Error("Sender ID and Receiver ID are required");
         }
-        const response = await API.get(`/chat/room/${recieverId}/${senderId}`);
+        const response = await API.get(`/chat/room/${receiverId}/${senderId}`);
         return response.data;
     } catch (error) {
         throw error;
     }
 };
+
 
 export const fetch_room_message = async (roomId: string, userId: string | undefined) => {
     try {

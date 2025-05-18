@@ -20,6 +20,7 @@ import ChatBox from "../../components/chat/Chatbox";
 import Wallets from "../../Pages/User/wallets";
 import ChatPage from "../../Pages/User/Chat";
 
+
 function StudentRoute() {
   return (
     <Routes>
@@ -34,13 +35,12 @@ function StudentRoute() {
       {/* Protected Routes */}
       <Route element={<ProtectedRoute />}>
         <Route element={<Layouts />}>
-          {/* Accessible after login */}
+         
           <Route path="/getProfile" element={<StudentProfile />} />
           <Route path="/editProfile" element={<EditProfile />} />
           <Route path="/languages" element={<LanguageSelectors />} />
           <Route path="/learning" element={<ChooseLearning />} />
 
-          {/* Language-Required Routes */}
           <Route
             element={
               <RequireLanguage>
@@ -56,7 +56,7 @@ function StudentRoute() {
             <Route path="/tutorDetail/:id" element={<TutorDetails />} />
             <Route path="/wallet" element={<Wallets />} />
             <Route path="/chat" element={<ChatPage />} />
-
+            
           </Route>
         </Route>
       </Route>

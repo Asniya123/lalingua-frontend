@@ -2,13 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../../../redux/store.js';
 import { fetchTutorProfile, uploadProfilePicture, updateTutorProfile } from '../../../redux/slice/tutorSlice.js';
-import Cookies from 'js-cookie'; 
+import Cookies from 'js-cookie';
 import { useNavigate } from 'react-router';
 import { toast } from 'react-toastify';
 import { changePassword, listCourses } from '../../../services/tutorAuth.js';
-import { listLanguage} from '../../../services/adminAuth.js';
-import type { ILanguage } from "../../../interfaces/admin";
-import type { ICourse } from "../../../interfaces/tutor";
+import { listLanguage } from '../../../services/adminAuth.js';
+import type { ILanguage } from '../../../interfaces/admin';
+import type { ICourse } from '../../../interfaces/tutor';
 
 interface Tutor {
   is_blocked: boolean | null;
@@ -23,6 +23,7 @@ interface Tutor {
   specialization?: string;
   dateOfBirth?: string;
   bio?: string;
+  documents?: string; // Added documents field
 }
 
 const TutorProfile: React.FC = () => {
@@ -46,7 +47,8 @@ const TutorProfile: React.FC = () => {
     experience: '',
     specialization: '',
     dateOfBirth: '',
-    bio: ''
+    bio: '',
+    documents: '',
   });
   const navigate = useNavigate();
 
@@ -83,7 +85,8 @@ const TutorProfile: React.FC = () => {
         experience: profile.experience || '',
         specialization: profile.specialization || '',
         dateOfBirth: profile.dateOfBirth || '',
-        bio: profile.bio || ''
+        bio: profile.bio || '',
+        documents: profile.documents || '', 
       });
     }
   }, [profile, navigate]);
@@ -98,26 +101,26 @@ const TutorProfile: React.FC = () => {
       ) {
         setLanguages(languageResponse.data.languages);
       } else {
-        console.warn("No languages found or invalid response format:", languageResponse);
-        toast.error("No languages available");
+        console.warn('No languages found or invalid response format:', languageResponse);
+        toast.error('No languages available');
       }
     } catch (err) {
-      console.error("Failed to fetch languages:", err);
+      console.error('Failed to fetch languages:', err);
     }
   };
 
   const fetchTutorCourses = async () => {
     try {
-      const result = await listCourses(1, 10); // Fetch first page, up to 10 courses
+      const result = await listCourses(1, 10);
       if (result.courses && Array.isArray(result.courses)) {
         setCourses(result.courses);
       } else {
-        console.warn("No courses found or invalid response format:", result);
-        toast.error("No courses available");
+        console.warn('No courses found or invalid response format:', result);
+        toast.error('No courses available');
       }
     } catch (err) {
-      console.error("Failed to fetch courses:", err);
-      toast.error("Failed to fetch courses");
+      console.error('Failed to fetch courses:', err);
+      toast.error('Failed to fetch courses');
     }
   };
 
@@ -197,7 +200,8 @@ const TutorProfile: React.FC = () => {
         experience: profile.experience || '',
         specialization: profile.specialization || '',
         dateOfBirth: profile.dateOfBirth || '',
-        bio: profile.bio || ''
+        bio: profile.bio || '',
+        documents: profile.documents || '', 
       });
     }
   };
@@ -213,15 +217,25 @@ const TutorProfile: React.FC = () => {
       if (!token) {
         throw new Error('No token found. Please log in again.');
       }
-
-      const updatedProfileData = {
-        name: profile?.name || '',
-        email: profile?.email || '',
-        mobile: profile?.mobile || '',
-        ...editedProfile
-      };
-
-      await dispatch(updateTutorProfile({ token, profileData: updatedProfileData })).unwrap();
+  
+      const formData = new FormData();
+      formData.append('name', profile?.name || '');
+      formData.append('email', profile?.email || '');
+      formData.append('mobile', profile?.mobile || '');
+      formData.append('qualification', editedProfile.qualification || '');
+      formData.append('language', editedProfile.language || '');
+      formData.append('country', editedProfile.country || '');
+      formData.append('experience', editedProfile.experience || '');
+      formData.append('specialization', editedProfile.specialization || '');
+      formData.append('dateOfBirth', editedProfile.dateOfBirth || '');
+      formData.append('bio', editedProfile.bio || '');
+      formData.append('documents', editedProfile.documents || '');
+  
+      console.log("Sending FormData:", formData);
+  
+      const result = await dispatch(updateTutorProfile({ token, profileData: formData })).unwrap();
+      console.log("Update response:", result);
+  
       toast.success('Profile updated successfully!');
       setIsEditing(false);
       dispatch(fetchTutorProfile(token));
@@ -235,6 +249,8 @@ const TutorProfile: React.FC = () => {
       }
     }
   };
+  
+  
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900 flex flex-col">
@@ -314,6 +330,21 @@ const TutorProfile: React.FC = () => {
                       readOnly
                       className="flex-1 bg-gray-700 text-white p-3 rounded-md border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
+                  </div>
+                  <div className="flex items-center space-x-4">
+                    <span className="text-green-400 font-semibold w-32">Document:</span>
+                    {profile?.documents ? (
+                      <a
+                        href={profile.documents}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-400 hover:text-blue-500 underline"
+                      >
+                        View Document
+                      </a>
+                    ) : (
+                      <span className="text-gray-400">No document uploaded</span>
+                    )}
                   </div>
                 </div>
 

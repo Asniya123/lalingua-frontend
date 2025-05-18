@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getCourse, editCourse } from "../../../services/tutorAuth";
-import { listCategories } from "../../../services/adminAuth"; // Import listCategories
+import { listCategories } from "../../../services/adminAuth"; 
 import { AxiosError } from "axios";
 import { toast } from "react-toastify";
 import { ICourse } from "../../../interfaces/tutor";

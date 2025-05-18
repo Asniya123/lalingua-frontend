@@ -6,6 +6,7 @@ export default interface Chat {
     messages: string[] | Message[];
     lastMessage: string | Message;
   }
+  
   export interface Message {
     _id?: string;
     chatId?: string;

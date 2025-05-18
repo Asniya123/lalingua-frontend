@@ -20,6 +20,8 @@ const initialState = {
   updateSuccess: false
 };
 
+
+
 // Tutor Registration
 export const register = createAsyncThunk<Tutor, Tutor, { rejectValue: string }>(
   'tutor/register',
@@ -76,8 +78,13 @@ export const fetchTutorProfile = createAsyncThunk(
         window.location.href = '/tutor/login';
         return rejectWithValue('Your account has been blocked by the admin. Please contact support.');
       }
-      return tutor;
-
+      return {
+        ...tutor,
+        name: tutor.name || '',
+        email: tutor.email || '',
+        mobile: tutor.mobile || '',
+        documents: tutor.documents || '', 
+      };
     } catch (error) {
       if (error instanceof Error) {
         return rejectWithValue(error.message)
@@ -88,14 +95,15 @@ export const fetchTutorProfile = createAsyncThunk(
   }
 )
 
-export const updateTutorProfile = createAsyncThunk<Tutor, { token: string; profileData: Partial<Tutor> }, { rejectValue: string }>(
+export const updateTutorProfile = createAsyncThunk<Tutor, { token: string; profileData: FormData;
+}, { rejectValue: string }>(
   'tutor/updateProfile',
   async ({ token, profileData }, { rejectWithValue }) => {
     try {
       const response = await tutorAPI.put('/editProfile', profileData, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      console.log(response.data, "-----------------------------------------");
+     
       const updatedTutor = response.data.tutor;
       if (updatedTutor.is_blocked) {
         Cookies.remove('tutorToken');
@@ -137,6 +145,9 @@ export const uploadProfilePicture = createAsyncThunk<Tutor, { token: string; fil
     }
   }
 )
+
+
+
 
 const tutorSlice = createSlice({
   name: "tutor",
@@ -227,6 +238,7 @@ const tutorSlice = createSlice({
         state.loading = false
         state.error = action.payload as string
       })
+      
   },
 });
 

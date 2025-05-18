@@ -22,10 +22,12 @@ const CardContent: React.FC<CardContentProps> = ({ children, className = "" }) =
 
 interface CardHeaderProps {
   children: React.ReactNode;
+  className?: string;
 }
 
-const CardHeader: React.FC<CardHeaderProps> = ({ children }) => {
-  return <div className="border-b pb-2 mb-4">{children}</div>;
+const CardHeader: React.FC<CardHeaderProps> = ({ children, className = "" }) => {
+  return <div className={`border-b pb-2 mb-4 ${className}`}>{children}</div>;
 };
+
 
 export { Card, CardContent, CardHeader };

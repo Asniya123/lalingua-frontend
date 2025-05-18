@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Star } from "lucide-react";
@@ -8,7 +9,7 @@ import { getCourseById, createRazorpayOrder, enrollCourse, wallet_payment } from
 import { toast } from "react-toastify";
 import { useSelector } from "react-redux";
 import { RootState } from "../../../redux/store";
-import { ICourse} from "../../../interfaces/user";
+import { ICourse } from "../../../interfaces/user";
 
 interface Student {
   _id: string;
@@ -69,7 +70,7 @@ const CourseDetail: React.FC = () => {
       const response = await getCourseById(id);
       console.log("Full course response:", JSON.stringify(response, null, 2));
       if (response.success && response.course) {
-        console.log("Lessons data:", response.course.lessons);
+        console.log("Tutor data:", response.course.tutor);
         setCourse(response.course);
       } else {
         setError("Course not found");
@@ -261,7 +262,18 @@ const CourseDetail: React.FC = () => {
                         <span className="text-gray-600 text-sm">{course.tutor.name.charAt(0)}</span>
                       </div>
                     )}
-                    <span className="text-sm font-medium text-gray-700">
+                    <span
+                      className="text-sm font-medium text-gray-700 cursor-pointer hover:underline pointer-events-auto z-10"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        console.log("Tutor name clicked", course.tutor);
+                        if (course.tutor && course.tutor._id) {
+                          navigate(`/tutorDetail/${course.tutor._id}`);
+                        } else {
+                          toast.error("Tutor details not available");
+                        }
+                      }}
+                    >
                       {course.tutor.name}
                     </span>
                   </>
@@ -309,12 +321,27 @@ const CourseDetail: React.FC = () => {
               <CardContent>
                 {course.lessons && course.lessons.length > 0 ? (
                   <div className="space-y-6">
-                    {course.lessons.map((lesson) => (
+                    {course.lessons.map((lesson, index) => (
                       <div key={lesson._id} className="border-b pb-4 last:border-b-0">
                         <h3 className="text-lg font-medium text-gray-800 mb-2">
                           {lesson.title}
                         </h3>
                         <p className="text-muted-foreground mb-2">{lesson.description}</p>
+                        {lesson.syllabus ? (
+                          <div className="mb-2">
+                            <p className="text-sm font-medium text-gray-700">Syllabus:</p>
+                            <ol className="list-decimal list-inside text-muted-foreground text-sm">
+                              <li>
+                                <span className="font-medium">Title: {lesson.syllabus.title}</span>
+                                {lesson.syllabus.description
+                                  ? ` - ${lesson.syllabus.description}`
+                                  : " - No description"}
+                              </li>
+                            </ol>
+                          </div>
+                        ) : (
+                          <p className="text-muted-foreground text-sm mb-2">No syllabus available</p>
+                        )}
                         {isEnrolled ? (
                           lesson.videoUrl ? (
                             <div>
@@ -349,8 +376,8 @@ const CourseDetail: React.FC = () => {
                               }
                             >
                               Your browser does not support this video format.
-                              </video>
-                            </div>
+                            </video>
+                          </div>
                         ) : (
                           <p className="text-muted-foreground">No preview video available</p>
                         )}

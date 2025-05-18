@@ -10,7 +10,7 @@ import EmojiPicker, { EmojiClickData } from "emoji-picker-react";
 import IncommingCallModal from "../videoCall/incomingCall_Modal";
 import { useSocket } from "../context/socketContext";
 import uploadToCloudinary from "../../utils/Cloudinary";
-import { Avatar, CardBody, ScrollShadow } from "@nextui-org/react";
+import { CardBody, ScrollShadow } from "@nextui-org/react";
 import { Button } from "../UI/Button";
 import { Card } from "../UI/card";
 import { Input } from "../UI/InputField";
@@ -57,6 +57,7 @@ export default function TutorChatBox({
 
   useEffect(() => {
     if (!roomId || !tutor?._id) {
+      console.error("Invalid roomId or tutorId:", { roomId, tutorId: tutor?._id });
       setIsLoading(false);
       toast.error("Invalid room or tutor data");
       return;
@@ -70,41 +71,77 @@ export default function TutorChatBox({
     const fetchRecieverData = async () => {
       try {
         setIsLoading(true);
-        const recieverUser = await fetch_tutor_room_message(roomId, tutor._id);
+        console.log("fetchRecieverData called with:", { roomId, tutorId: tutor._id });
+        const response = await fetch_tutor_room_message(roomId, tutor._id);
+        console.log("fetch_tutor_room_message response:", JSON.stringify(response, null, 2));
 
-        if (recieverUser.success && recieverUser.room && Array.isArray(recieverUser.room) && recieverUser.room.length > 0) {
-          const roomData = recieverUser.room[0];
-          if (!roomData.participants || !roomData.name || roomData.profilePicture === undefined) {
-            throw new Error("Invalid room data: missing participants, name, or profilePicture");
+        if (response.success && response.room) {
+          let roomData = response.room;
+          if (Array.isArray(roomData)) {
+            console.warn("Received room as array, using first element:", roomData);
+            roomData = roomData[0] || {};
+          }
+          if (!roomData || !Array.isArray(roomData.participants)) {
+            throw new Error("Invalid room data: missing or invalid participants");
+          }
+          console.log(roomData, "room Data");
+          const otherParticipant = roomData.participants.find(
+            (p: { _id: string }) => p._id !== tutor._id
+          );
+          if (!otherParticipant) {
+            throw new Error("No other participant found in room");
           }
 
           setReciever({
-            _id: roomData.participants,
-            name: roomData.name,
-            profilePicture: roomData.profilePicture,
+            _id: otherParticipant._id,
+            name: roomData.name || otherParticipant.name || otherParticipant.username || "Unknown",
+            profilePicture: roomData.profilePicture || otherParticipant.profilePicture || "/logos/avatar.avif",
           });
 
           setMessages(Array.isArray(roomData.messages) ? roomData.messages : []);
-          if (reciever?._id && socket) {
+          if (socket) {
             socket.emit("mark-messages-read", { chatId: roomId, userId: tutor._id });
           }
         } else if (userId) {
+          console.log("Falling back to fetch_tutor_room with userId:", userId);
           const roomResponse = await fetch_tutor_room(userId, tutor._id);
-          console.log("fetch_room response:", roomResponse);
+          console.log("fetch_tutor_room response:", roomResponse);
           if (roomResponse.success && roomResponse.room) {
-            const user = roomResponse.room.participants.find(
+            let roomData = roomResponse.room;
+            console.log(roomData, "user-----------");
+            if (Array.isArray(roomData)) {
+              console.warn("Received room as array in fallback, using first element:", roomData);
+              roomData = roomData[0] || {};
+            }
+            if (!roomData || !Array.isArray(roomData.participants)) {
+              throw new Error("Invalid room data in fallback: missing or invalid participants");
+            }
+            const user = roomData.participants.find(
               (u: { _id: string }) => u._id !== tutor._id
             );
-            setReciever(user || null);
-            setMessages(Array.isArray(roomResponse.room.messages) ? roomResponse.room.messages : []);
+            if (user) {
+              setReciever({
+                _id: user._id,
+                name: user.name || user.username || "Unknown",
+                profilePicture: user.profilePicture || "/logos/avatar.avif",
+              });
+              setMessages(Array.isArray(roomData.messages) ? roomData.messages : []);
+            } else {
+              toast.error("Failed to load user data");
+            }
           } else {
-            toast.error("Failed to load user data");
+            toast.error("Failed to load room data");
           }
         } else {
           toast.error("No user found for this chat");
         }
-      } catch (error) {
-        console.error("Error fetching room messages:", error);
+      } catch (error: any) {
+        console.error("Error fetching room messages:", {
+          message: error.message,
+          response: error.response?.data,
+          status: error.response?.status,
+          responseMessage: error.response?.data?.message
+        });
         toast.error("Error loading chat room");
       } finally {
         setIsLoading(false);
@@ -238,7 +275,7 @@ export default function TutorChatBox({
       {/* Header */}
       <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-4 shadow-lg flex items-center">
         <img
-          src={reciever.profilePicture as string}
+          src={getProfilePictureSrc(reciever.profilePicture)}
           alt={reciever.name}
           className="w-[5%] rounded-[50%]"
         />
@@ -283,17 +320,6 @@ export default function TutorChatBox({
               key={msg._id || `${msg.senderId}-${msg.message_time}`}
               className={`flex mb-4 ${msg.senderId === tutor?._id ? "justify-end" : "justify-start"}`}
             >
-              {msg.senderId !== tutor?._id && (
-                <Avatar
-                  src={getProfilePictureSrc(
-                    typeof reciever.profilePicture === "string" ? reciever.profilePicture : undefined
-                  )}
-                  name={reciever.name || "Unknown"}
-                  size="sm"
-                  radius="full"
-                  className="mr-2 shadow-md"
-                />
-              )}
               <div
                 className={`rounded-2xl p-4 max-w-md shadow-md transition-all duration-200 ${
                   msg.senderId === tutor?._id

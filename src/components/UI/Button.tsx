@@ -8,8 +8,9 @@ interface ButtonProps {
   onClick?: React.MouseEventHandler<HTMLButtonElement>;
   type?: 'button' | 'submit' | 'reset';
   disabled?: boolean;
-  isIconOnly?: boolean;  
+  isIconOnly?: boolean;
   color?: 'primary' | 'secondary' | 'danger';
+  title?: string; 
 }
 
 const Button: React.FC<ButtonProps> = ({
@@ -22,6 +23,7 @@ const Button: React.FC<ButtonProps> = ({
   disabled = false,
   isIconOnly = false,
   color = 'primary',
+  title, 
 }) => {
   const baseStyles = 'rounded-md focus:outline-none transition-colors duration-200';
 
@@ -59,6 +61,7 @@ const Button: React.FC<ButtonProps> = ({
       onClick={onClick}
       disabled={disabled}
       className={`${baseStyles} ${selectedVariant} ${sizeStyles} ${iconOnlyStyles} ${disabledStyles} ${className}`}
+      title={title} 
     >
       {children}
     </button>

@@ -10,11 +10,17 @@ import { VideoUpload } from "../../../utils/Cloudinary";
 import { ILesson } from "../../../interfaces/tutor";
 import { Loader } from "lucide-react";
 
+interface Syllabus {
+  title: string;
+  description?: string;
+}
+
 const EditLesson: React.FC = () => {
   const { courseId, lessonId } = useParams<{ courseId: string; lessonId: string }>();
   const navigate = useNavigate();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [syllabus, setSyllabus] = useState<Syllabus>({ title: "", description: "" });
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [introVideoFile, setIntroVideoFile] = useState<File | null>(null);
   const [existingVideoUrl, setExistingVideoUrl] = useState<string | null>(null);
@@ -36,6 +42,10 @@ const EditLesson: React.FC = () => {
         const lesson = await getLesson(lessonId);
         setTitle(lesson.title || "");
         setDescription(lesson.description || "");
+        setSyllabus({
+          title: lesson.syllabus?.title || "",
+          description: lesson.syllabus?.description || "",
+        });
         setExistingVideoUrl(lesson.videoUrl || null);
         setExistingIntroVideoUrl(lesson.introVideoUrl || null);
       } catch (err) {
@@ -76,9 +86,19 @@ const EditLesson: React.FC = () => {
       toast.error("Course ID or Lesson ID is missing");
       return;
     }
-    if (!title || !description) {
-      setError("Please fill in all fields");
-      toast.error("Please fill in all fields");
+    if (!title || !description || !syllabus.title) {
+      setError("Please fill in all required fields (title, description, syllabus title)");
+      toast.error("Please fill in all required fields");
+      return;
+    }
+    if (syllabus.title.length < 3 || syllabus.title.length > 100) {
+      setError("Syllabus title must be between 3 and 100 characters");
+      toast.error("Syllabus title must be between 3 and 100 characters");
+      return;
+    }
+    if (syllabus.description && syllabus.description.length > 500) {
+      setError("Syllabus description must not exceed 500 characters");
+      toast.error("Syllabus description must not exceed 500 characters");
       return;
     }
 
@@ -109,6 +129,10 @@ const EditLesson: React.FC = () => {
         courseId,
         title,
         description,
+        syllabus: {
+          title: syllabus.title,
+          description: syllabus.description || undefined,
+        },
         videoUrl: videoUrl || undefined,
         introVideoUrl: introVideoUrl || undefined,
       };
@@ -162,20 +186,63 @@ const EditLesson: React.FC = () => {
           </CardHeader>
           <CardContent className="p-6 space-y-6">
             <form onSubmit={handleSubmit} className="space-y-6">
-              <Input
-                placeholder="Enter lesson title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                disabled={loading}
-                type="text"
-              />
-              <textarea
-                placeholder="Enter lesson description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                disabled={loading}
-                className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-orange-500 h-32 resize-none"
-              />
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Lesson Title <span className="text-red-500">*</span>
+                </label>
+                <Input
+                  placeholder="Enter lesson title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  disabled={loading}
+                  type="text"
+                  className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-orange-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Description <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  placeholder="Enter lesson description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  disabled={loading}
+                  className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-orange-500 h-32 resize-none"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Lesson Syllabus <span className="text-red-500">*</span>
+                </label>
+                <div className="border border-gray-300 rounded-lg p-4 bg-gray-100 space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Syllabus Title <span className="text-red-500">*</span>
+                    </label>
+                    <Input
+                      type="text"
+                      placeholder="Enter syllabus title"
+                      value={syllabus.title}
+                      onChange={(e) => setSyllabus({ ...syllabus, title: e.target.value })}
+                      disabled={loading}
+                      className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-orange-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Syllabus Description (Optional)
+                    </label>
+                    <textarea
+                      placeholder="Enter syllabus description"
+                      value={syllabus.description}
+                      onChange={(e) => setSyllabus({ ...syllabus, description: e.target.value })}
+                      disabled={loading}
+                      className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-orange-500 h-24 resize-none"
+                    />
+                  </div>
+                </div>
+              </div>
               {[
                 { id: "introVideo", file: introVideoFile, existingUrl: existingIntroVideoUrl, label: "Intro Video", type: "intro" },
                 { id: "lessonVideo", file: videoFile, existingUrl: existingVideoUrl, label: "Lesson Video", type: "lesson" },
@@ -203,7 +270,7 @@ const EditLesson: React.FC = () => {
                           style={{ width: `${progress[type as keyof typeof progress]}%` }}
                         />
                       </div>
-                      {progress[type as keyof typeof progress] > 100 && (
+                      {progress[type as keyof typeof progress] >= 100 && (
                         <p className="text-xs text-green-600 font-semibold">Upload Completed</p>
                       )}
                     </div>
@@ -228,7 +295,7 @@ const EditLesson: React.FC = () => {
                   type="button"
                   onClick={handleCancel}
                   disabled={!loading}
-                  className="w-full bg-gray-500 hover Permanent Marker:bg-gray-600"
+                  className="w-full bg-gray-500 hover:bg-gray-600"
                 >
                   Cancel
                 </Button>

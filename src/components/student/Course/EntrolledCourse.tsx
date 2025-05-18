@@ -7,6 +7,7 @@ import { Button } from "../../UI/Button";
 import { ICourse } from "../../../interfaces/user";
 import { getEnrolledCourses, cancelEnrollment } from "../../../services/userAuth";
 import { toast } from "react-toastify";
+import { format, differenceInDays } from "date-fns";
 
 interface Student {
   _id: string;
@@ -18,10 +19,17 @@ interface Tutor {
   profilePicture?: string;
 }
 
+
+export interface IEnrolledCourse extends ICourse {
+  pricePaid: number;
+  enrolledDate?: string; 
+  status: "Active" | "Cancelled" | "Expired";
+}
+
 const EnrolledCourses: React.FC = () => {
   const navigate = useNavigate();
   const user = useSelector((state: RootState) => state.auth.student) as Student | null;
-  const [enrolledCourses, setEnrolledCourses] = useState<ICourse[]>([]);
+  const [enrolledCourses, setEnrolledCourses] = useState<IEnrolledCourse[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -98,20 +106,27 @@ const EnrolledCourses: React.FC = () => {
         errorMessage.includes("Refund period has expired")
           ? "Sorry, the refund period for this course has expired (7 days)."
           : errorMessage.includes("Enrollment not found")
-          ? "This course is not enrolled."
-          : errorMessage.includes("Student not found")
-          ? "User not found. Please log in again."
-          : errorMessage.includes("Cast to embedded failed")
-          ? "An error occurred while processing the refund. Please try again later."
-          : errorMessage;
+            ? "This course is not enrolled."
+            : errorMessage.includes("Student not found")
+              ? "User not found. Please log in again."
+              : errorMessage.includes("Cast to embedded failed")
+                ? "An error occurred while processing the refund. Please try again later."
+                : errorMessage;
       toast.error(friendlyMessage);
     }
   };
 
-  // Placeholder function for initiating chat
   const handleChatWithTutor = (tutorId: string, tutorName: string) => {
     navigate(`/chat?tutorId=${encodeURIComponent(tutorId)}`);
     console.log(`Initiating chat with tutor: ${tutorName} (${tutorId})`);
+  };
+
+  const isCancelEligible = (enrolledDate: string | undefined): boolean => {
+    if (!enrolledDate) return false;
+    const enrolledAt = new Date(enrolledDate);
+    if (isNaN(enrolledAt.getTime())) return false;
+    const daysSinceEnrollment = differenceInDays(new Date(), enrolledAt);
+    return daysSinceEnrollment <= 7;
   };
 
   if (loading) {
@@ -186,11 +201,11 @@ const EnrolledCourses: React.FC = () => {
                             {course.tutor.name}
                           </span>
                           <Button
-  onClick={() => handleChatWithTutor(course.tutor?._id ?? '', course.tutor?.name ?? 'Unknown Tutor')}
-  className="text-xs px-2 py-1 bg-blue-500 hover:bg-blue-600"
->
-  Chat
-</Button>
+                            onClick={() => handleChatWithTutor(course.tutor?._id ?? '', course.tutor?.name ?? 'Unknown Tutor')}
+                            className="text-xs px-2 py-1 bg-blue-500 hover:bg-blue-600"
+                          >
+                            Chat
+                          </Button>
                         </div>
                       </>
                     ) : (
@@ -205,6 +220,22 @@ const EnrolledCourses: React.FC = () => {
                   <p className="text-muted-foreground text-sm line-clamp-2">
                     {course.description || "No description available"}
                   </p>
+                  <div className="text-sm text-gray-600 space-y-1">
+                    <p>
+                      <strong>Price Paid:</strong> ₹
+                      {typeof course.pricePaid === "number" ? course.pricePaid.toFixed(2) : "N/A"}
+                    </p>
+                    <p>
+                      <strong>Enrolled Date:</strong>{" "}
+                      {course.enrolledDate ? format(new Date(course.enrolledDate), "PPP 'at' p") : "Unknown"}
+                    </p>
+                    <p><strong>Status:</strong> {course.status}</p>
+                    {!isCancelEligible(course.enrolledDate) && (
+                      <p className="text-red-500 text-xs">
+                        Refund period expired (7 days)
+                      </p>
+                    )}
+                  </div>
                   <div className="flex space-x-2">
                     <Button
                       onClick={() => navigate(`/lessons/${course._id}`)}
@@ -215,6 +246,14 @@ const EnrolledCourses: React.FC = () => {
                     <Button
                       onClick={() => handleCancelEnrollment(course._id, course.courseTitle)}
                       className="flex-1 bg-red-500 hover:bg-red-600"
+                      // disabled={course.status !== "Active" || !isCancelEligible(course.enrolledDate)}
+                      // title={
+                      //   !isCancelEligible(course.enrolledDate)
+                      //     ? "Refund period has expired (7 days)"
+                      //     : course.status !== "Active"
+                      //       ? "Cancellation not available for this status"
+                      //       : ""
+                      // }
                     >
                       Cancel Enrollment
                     </Button>

@@ -5,7 +5,7 @@ import { fetchTutorById, getLanguages } from '../../../services/userAuth';
 import { fetch_room } from '../../../services/chatService'; // Import fetch_room
 import type { ILanguage } from '../../../interfaces/admin';
 import { useSelector } from 'react-redux';
-import { RootState } from '../../../redux/store'; // Import Redux store types
+import { RootState } from '../../../redux/store'; 
 
 interface Tutor {
   _id?: string;
@@ -68,30 +68,7 @@ const TutorDetail: React.FC = () => {
     }
   };
 
-  // const handleChatClick = async () => {
-  //   if (!user?._id || !id) {
-  //     toast.error('User or Tutor ID is missing');
-  //     return;
-  //   }
-
-  //   try {
-      
-  //     const response = await fetch_room(id, user._id);
-  //     if (response.success && response.room?._id) {
-       
-  //       navigate(`/chat/${response.room._id}`);
-  //     } else {
-  //       toast.error('Failed to initialize chat');
-  //     }
-  //   } catch (err: any) {
-  //     toast.error(err.message || 'Failed to start chat');
-  //   }
-  // };
-
-  // const handleBookingClick = () => {
-  //   console.log('Booking button clicked');
-  //   navigate(`/booking/${id}`);
-  // };
+  
 
   const selectedLanguageName = tutor?.language
     ? languages.find((lang) => lang._id === tutor.language)?.name || tutor.language

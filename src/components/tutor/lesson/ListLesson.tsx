@@ -101,111 +101,99 @@ const LessonsList: React.FC = () => {
             </Button>
           </CardHeader>
           <CardContent className="px-6 py-4">
-            {loading ? (
-              <p className="text-center text-gray-500">Loading lessons...</p>
-            ) : error ? (
-              <p className="text-red-500 text-center">{error}</p>
-            ) : lessons.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left text-gray-700">
-                  <thead className="text-xs uppercase bg-gray-100 text-[#8B5252]">
-                    <tr>
-                      <th className="px-6 py-3 rounded-tl-lg">Title</th>
-                      <th className="px-6 py-3">Description</th>
-                      <th className="px-6 py-3">Intro Video</th>
-                      <th className="px-6 py-3">Main Video</th>
-                      <th className="px-6 py-3 rounded-tr-lg">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {lessons.map((lesson) => (
-                      <tr 
-                        key={lesson._id} 
-                        className="bg-white border-b hover:bg-gray-50 transition-colors duration-200"
-                      >
-                        <td className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
-                          {lesson.title}
-                        </td>
-                        <td className="px-6 py-4 max-w-xs truncate">
-                          {lesson.description}
-                        </td>
-                        <td className="px-6 py-4">
-                          {lesson.introVideoUrl ? (
-                            <video
-                              src={lesson.introVideoUrl}
-                              controls
-                              className="w-32 h-20 object-cover rounded-md"
-                            >
-                              Your browser does not support the video tag.
-                            </video>
-                          ) : (
-                            <span className="text-gray-400 italic">No video</span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4">
-                          {lesson.videoUrl ? (
-                            <video
-                              src={lesson.videoUrl}
-                              controls
-                              className="w-32 h-20 object-cover rounded-md"
-                            >
-                              Your browser does not support the video tag.
-                            </video>
-                          ) : (
-                            <span className="text-gray-400 italic">No video</span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex space-x-2">
-                            <Button
-                              onClick={() => handleEditLesson(lesson._id!)}
-                              className="bg-blue-500 text-white hover:bg-blue-600 p-2 rounded-md flex items-center gap-1"
-                              disabled={loading}
-                            >
-                              <Pencil className="h-4 w-4" />
-                              Edit
-                            </Button>
-                            <Button
-                              onClick={() => handleDeleteLesson(lesson._id!)}
-                              className="bg-red-500 text-white hover:bg-red-600 p-2 rounded-md flex items-center gap-1"
-                              disabled={loading}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                              Delete
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+  {loading ? (
+    <p className="text-center text-gray-500">Loading lessons...</p>
+  ) : error ? (
+    <p className="text-red-500 text-center">{error}</p>
+  ) : lessons.length > 0 ? (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {lessons.map((lesson) => (
+        <div key={lesson._id} className="bg-white shadow-md rounded-lg p-4">
+          <h3 className="text-xl font-semibold text-[#8B5252]">{lesson.title}</h3>
+          <p className="text-gray-700 mt-1 line-clamp-2">{lesson.description}</p>
+
+          {lesson.syllabus && (
+            <div className="mt-2">
+              <h4 className="text-sm font-medium text-gray-800">Syllabus:</h4>
+              <p className="text-gray-600">{lesson.syllabus.title}</p>
+              {lesson.syllabus.description && (
+                <p className="text-gray-500 text-sm">{lesson.syllabus.description}</p>
+              )}
+            </div>
+          )}
+
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 mt-4">
+            {lesson.introVideoUrl ? (
+              <video
+                src={lesson.introVideoUrl}
+                controls
+                className="w-full sm:w-1/2 h-32 object-cover rounded"
+              />
             ) : (
-              <p className="text-center text-gray-500 py-8">No lessons available for this course.</p>
+              <p className="text-sm text-gray-400 italic">No intro video</p>
             )}
 
-            {totalLessons > 0 && (
-              <div className="flex justify-between items-center mt-6">
-                <Button
-                  className="bg-gray-500 text-white hover:bg-gray-600 px-4 py-2 rounded-md"
-                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                  disabled={currentPage === 1 || loading}
-                >
-                  Previous
-                </Button>
-                <span className="text-gray-700 font-medium">
-                  Page {currentPage} of {totalPages}
-                </span>
-                <Button
-                  className="bg-gray-500 text-white hover:bg-gray-600 px-4 py-2 rounded-md"
-                  onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                  disabled={currentPage === totalPages || loading}
-                >
-                  Next
-                </Button>
-              </div>
+            {lesson.videoUrl ? (
+              <video
+                src={lesson.videoUrl}
+                controls
+                className="w-full sm:w-1/2 h-32 object-cover rounded"
+              />
+            ) : (
+              <p className="text-sm text-gray-400 italic">No main video</p>
             )}
-          </CardContent>
+          </div>
+
+          <div className="flex gap-2 mt-4">
+            <Button
+              onClick={() => handleEditLesson(lesson._id!)}
+              className="bg-blue-500 text-white hover:bg-blue-600 px-3 py-1 rounded-md flex items-center gap-1"
+              disabled={loading}
+            >
+              <Pencil className="h-4 w-4" />
+              Edit
+            </Button>
+            <Button
+              onClick={() => handleDeleteLesson(lesson._id!)}
+              className="bg-red-500 text-white hover:bg-red-600 px-3 py-1 rounded-md flex items-center gap-1"
+              disabled={loading}
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete
+            </Button>
+          </div>
+        </div>
+      ))}
+    </div>
+  ) : (
+    <p className="text-center text-gray-500 py-8">
+      No lessons available for this course.
+    </p>
+  )}
+
+  {totalLessons > 0 && (
+    <div className="flex justify-between items-center mt-6">
+      <Button
+        className="bg-gray-500 text-white hover:bg-gray-600 px-4 py-2 rounded-md"
+        onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+        disabled={currentPage === 1 || loading}
+      >
+        Previous
+      </Button>
+      <span className="text-gray-700 font-medium">
+        Page {currentPage} of {totalPages}
+      </span>
+      <Button
+        className="bg-gray-500 text-white hover:bg-gray-600 px-4 py-2 rounded-md"
+        onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+        disabled={currentPage === totalPages || loading}
+      >
+        Next
+      </Button>
+    </div>
+  )}
+</CardContent>
+
         </Card>
       </div>
     </div>

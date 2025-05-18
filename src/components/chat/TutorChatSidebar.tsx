@@ -23,6 +23,7 @@ export default function TutorChatSidebar({ onSelectRoom, chats, setChats, setSea
   const [selectedRoom, setSelectedRoom] = useState<string | null>(null);
 
   useEffect(() => {
+    console.log("TutorChatSidebar chats:", JSON.stringify(chats, null, 2));
     if (!socket) return;
     socket.on("new-badge", (message: Message) => {
       const lastChattedRoom = localStorage.getItem("lastChattedRoom");
@@ -69,7 +70,12 @@ export default function TutorChatSidebar({ onSelectRoom, chats, setChats, setSea
 
   const handleRoomSelection = async (receiverId: string) => {
     try {
+      if (!receiverId || !tutor?._id) {
+        throw new Error("Receiver ID or Tutor ID is missing");
+      }
+      console.log("handleRoomSelection called with:", { receiverId, tutorId: tutor?._id });
       const response = await fetch_tutor_room(receiverId, tutor?._id);
+      console.log("handleRoomSelection response:", response);
       if (response.success && response.room?._id) {
         setSelectedRoom(response.room._id);
         onSelectRoom(response.room._id);
@@ -84,8 +90,13 @@ export default function TutorChatSidebar({ onSelectRoom, chats, setChats, setSea
       } else {
         toast.error("Failed to load chat room");
       }
-    } catch (error) {
-      console.error("Error selecting room:", error);
+    } catch (error: any) {
+      console.error("Error selecting room:", {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        responseMessage: error.response?.data?.message
+      });
       toast.error("Error loading chat room");
     }
   };
@@ -99,7 +110,7 @@ export default function TutorChatSidebar({ onSelectRoom, chats, setChats, setSea
       return (
         <div className="flex flex-col items-center justify-center h-full text-center">
           <svg
-            className="w-14 h-14   text-gray-400 mb-4"
+            className="w-14 h-14 text-gray-400 mb-4"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -120,22 +131,27 @@ export default function TutorChatSidebar({ onSelectRoom, chats, setChats, setSea
 
     return users.map((user) => (
       <div
-        key={user._id}
+        key={user._id || user.chatId} // Fallback to chatId if _id is undefined
         className={`p-4 cursor-pointer transition-all duration-200 rounded-lg mx-2 my-1 ${
           selectedRoom === user.chatId
             ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white"
             : "hover:bg-gray-100"
         }`}
-        onClick={() => handleRoomSelection(user._id)}
+        onClick={() => {
+          if (!user._id) {
+            console.error("Invalid user ID:", user);
+            toast.error("Cannot load chat: Invalid user ID");
+            return;
+          }
+          handleRoomSelection(user._id);
+        }}
       >
         <div className="flex items-center space-x-4">
-        <img
-  src={getProfilePictureSrc(user.profilePicture)}
-  alt={user.name || "Unknown"}
-  className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-[0_4px_10px_rgba(0,0,0,0.3)]"
-
-/>
-
+          <img
+            src={getProfilePictureSrc(user.profilePicture)}
+            alt={user.name || "Unknown"}
+            className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-[0_4px_10px_rgba(0,0,0,0.3)]"
+          />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold truncate">{user.name || "Unknown"}</p>
             <div className="flex items-center">

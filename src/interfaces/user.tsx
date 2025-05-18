@@ -1,6 +1,7 @@
 import { Icategory } from "./admin";
 import Tutor from "./tutor";
 
+
 export default interface Student {
     id: any;
     success: any;
@@ -40,6 +41,7 @@ export interface ILessonPreview {
   description: string;
   introVideoUrl?: string;
   videoUrl?: string;
+  syllabus?: { title: string; description?: string };
 }
 
 export interface ICourse {
@@ -60,13 +62,15 @@ export interface ICourse {
   updatedAt?: Date;
 }
 
-export  interface ILesson {
+
+
+export interface ILesson {
   _id?: string;
   title: string;
   description: string;
-  videoUrl?: string;
-  courseId: string;
-  introVideoUrl?: string
+  introVideoUrl: string;
+  videoUrl: string;
+  syllabus?: { title: string; description?: string };
 }
 export interface OrderRequest {
   paymentMethod:  "onlinePayment";
@@ -89,4 +93,10 @@ export interface OrderResponse {
   success: boolean;
   message?: string;
   error?: string;
+}
+
+export interface IEnrolledCourse extends ICourse {
+  pricePaid: number;
+  enrolledDate?: string;
+  status: "Active" | "Cancelled" | "Expired";
 }

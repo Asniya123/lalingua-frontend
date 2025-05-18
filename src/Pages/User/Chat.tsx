@@ -53,7 +53,7 @@ export default function ChatPage() {
     try {
       if (!user?._id) return;
       const chatsResponse = await fetch_chats(user._id, searchTerm);
-      console.log("fetch_chats response:", chatsResponse); 
+      console.log("fetch_chats response:-----------------", chatsResponse); 
       if (chatsResponse.success) {
         const updatedChats = chatsResponse.users.map((chat: any) => ({
           ...chat,

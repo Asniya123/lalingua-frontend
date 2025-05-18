@@ -1,6 +1,6 @@
 import axios, { AxiosError } from "axios";
 import Cookies from "js-cookie";
-import Student, { ICourse, ILesson } from "../interfaces/user.js";
+import Student, { ICourse, IEnrolledCourse, ILesson} from "../interfaces/user.js";
 import API from "../api/axiosInstance.js";
 import { Icategory, ILanguage } from "../interfaces/admin.js";
 import { Wallet } from "../interfaces/wallet.js";
@@ -62,7 +62,6 @@ export const loginUser = async (email: string, password: string) => {
     console.log("passwor", password);
 
     const response = await API.post("/login", { email, password });
-    console.log("respnse----------------------", response);
     if (response.data.blocked) {
       throw new Error("Your account has been blocked by the admin.");
     }
@@ -256,7 +255,7 @@ export const getCourseById = async (courseId: string) => {
 export const getEnrolledCourses = async (userId: string) => {
   try {
     const response = await API.get(`/enrollments/${userId}`);
-    return response.data as { success: boolean; courses: ICourse[] };
+    return response.data as { success: boolean; courses: IEnrolledCourse[] };
   } catch (error) {
     console.error("Error fetching enrolled courses:", error);
     throw error;
@@ -412,3 +411,7 @@ export const wallet_payment = async (data: { userId: string|undefined; amount: n
     throw error;
   }
 };
+
+
+
+

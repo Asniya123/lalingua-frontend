@@ -18,7 +18,7 @@ interface Student {
 
 interface Tutor {
   _id: string;
-  name?: string; 
+  name?: string;
   profilePicture?: string;
 }
 
@@ -71,21 +71,31 @@ const Course: React.FC = () => {
         sortBy,
         selectedLanguageId ?? undefined
       );
+      console.log("Frontend Response:", response);
       if (response.success) {
         const newCourses = response.courses || [];
         const newCategories = response.category || [];
         setCourses([...newCourses]);
         setCategories([...newCategories]);
-        setTotalCourses(response.total || 0);
+        setTotalCourses(response.total ?? 0); // Fallback to 0 if undefined
 
         const counts: { [key: string]: number } = { all: response.total || 0 };
         newCourses.forEach((course: ICourse) => {
-          const catId = typeof course.category === "object" && course.category?._id
-            ? course.category._id
-            : course.category?.toString();
+          const catId =
+            typeof course.category === "object" && course.category?._id
+              ? course.category._id
+              : course.category?.toString();
           if (catId) counts[catId] = (counts[catId] || 0) + 1;
         });
         setCategoryCounts(counts);
+
+        console.log("State Updated:", {
+          courses: newCourses.length,
+          categories: newCategories.length,
+          totalCourses: response.total,
+          totalPages,
+          showPagination: totalCourses > limit && totalPages > 1,
+        });
       } else {
         setCourses([]);
         setCategories([]);
@@ -96,13 +106,17 @@ const Course: React.FC = () => {
     } catch (error) {
       console.error("Fetch courses error:", error);
       setError("Failed to load courses. Please try again.");
+      setTotalCourses(0);
     } finally {
       setLoading(false);
     }
   };
 
   const handlePageChange = (page: number) => {
-    setCurrentPage(page);
+    if (page >= 1 && page <= totalPages) {
+      console.log("Changing page to:", page);
+      setCurrentPage(page);
+    }
   };
 
   const handleChangeLanguage = () => {
@@ -115,6 +129,12 @@ const Course: React.FC = () => {
     } else {
       navigate(`/courseDetail/${courseId}`);
     }
+  };
+
+  // Temporary function to test pagination
+  const forcePagination = () => {
+    setTotalCourses(20); // Simulate 20 courses
+    console.log("Forced totalCourses to 20");
   };
 
   return (
@@ -144,6 +164,10 @@ const Course: React.FC = () => {
             {!selectedLanguageId && <p className="text-red-500">Please select a language.</p>}
             <Button variant="outline" onClick={handleChangeLanguage}>
               Change Language
+            </Button>
+            {/* Temporary button to test pagination */}
+            <Button variant="outline" onClick={forcePagination}>
+              Test Pagination
             </Button>
           </div>
           <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-4 sm:space-y-0 sm:space-x-4">
@@ -281,7 +305,7 @@ const Course: React.FC = () => {
                         <Button
                           variant="outline"
                           className="bg-green-600 text-white hover:bg-green-700 px-4 py-1"
-                          onClick={() => navigate("/enrolled-courses")}
+                          onClick={() => navigate("/enrolled-Courses")}
                         >
                           Enrolled
                         </Button>
@@ -298,9 +322,10 @@ const Course: React.FC = () => {
                 );
               })}
             </div>
-            {totalCourses > limit && (
-              <div className="mt-8 flex justify-center">
-                <nav className="flex items-center space-x-2">
+            <div className="mt-8">
+              
+              {totalCourses > limit && totalPages > 1 ? (
+                <nav className="flex justify-center items-center space-x-2 border-2 border-red-500 p-4 bg-white">
                   <Button
                     variant="outline"
                     size="sm"
@@ -309,14 +334,14 @@ const Course: React.FC = () => {
                   >
                     Previous
                   </Button>
-                  {Array.from({ length: totalPages }).map((_, index) => (
+                  {Array.from({ length: totalPages }, (_, index) => index + 1).map((page) => (
                     <Button
-                      key={index}
-                      variant={currentPage === index + 1 ? "default" : "outline"}
+                      key={page}
+                      variant={currentPage === page ? "default" : "outline"}
                       size="sm"
-                      onClick={() => handlePageChange(index + 1)}
+                      onClick={() => handlePageChange(page)}
                     >
-                      {index + 1}
+                      {page}
                     </Button>
                   ))}
                   <Button
@@ -328,8 +353,12 @@ const Course: React.FC = () => {
                     Next
                   </Button>
                 </nav>
-              </div>
-            )}
+              ) : (
+                <p className="text-center text-red-500">
+                  Pagination not shown: {totalCourses} courses is not enough ( {limit})
+                </p>
+              )}
+            </div>
           </>
         )}
       </div>

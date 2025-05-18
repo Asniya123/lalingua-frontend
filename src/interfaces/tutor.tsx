@@ -23,18 +23,18 @@ export interface Login {
 
 
 export interface ICourse {
-    isBlock: boolean;
-    _id?: string;
-    courseTitle?: string;
-    description?: string;
-    imageUrl?: string;
-    regularPrice?: number;
-    category: string | { _id: string; name: string; description?: string; __v?: number };
-    language: string | { _id: string; name: string };
-    status?: "active" | "blocked";
-    createdAt?: Date;
-    updatedAt?: Date;
-  }
+  isBlock: boolean;
+  _id?: string;
+  courseTitle?: string;
+  description?: string;
+  imageUrl?: string;
+  regularPrice?: number;
+  category: string | { _id: string; name: string; description?: string; __v?: number };
+  language: string | { _id: string; name: string };
+  status?: "active" | "blocked";
+  createdAt?: Date;
+  updatedAt?: Date;
+}
 
 
 export  interface ILesson {
@@ -43,5 +43,6 @@ export  interface ILesson {
     description: string;
     videoUrl?: string;
     courseId: string;
-    introVideoUrl?: string
+    introVideoUrl?: string;
+    syllabus?: { title: string; description?: string };
   }

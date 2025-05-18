@@ -1,29 +1,35 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { useSelector } from "react-redux"; 
-import { RootState } from "../../../redux/store"; 
-import { Formik, Form, Field, ErrorMessage } from "formik";
-import * as Yup from "yup";
-import { addCourse } from "../../../services/tutorAuth";
-import { listCategories, listLanguage } from "../../../services/adminAuth";
-import { AxiosError } from "axios";
-import { toast } from "react-toastify";
-import ImageUpload from "../../../utils/Cloudinary";
-import { ILanguage } from "../../../interfaces/admin";
+"use client"
+
+import type React from "react"
+import { useState, useEffect } from "react"
+import { useNavigate } from "react-router-dom"
+import { useSelector } from "react-redux"
+import type { RootState } from "../../../redux/store"
+import { Formik, Form, Field, ErrorMessage, FieldArray } from "formik"
+import * as Yup from "yup"
+import { addCourse } from "../../../services/tutorAuth"
+import { listCategories, listLanguage } from "../../../services/adminAuth"
+import type { AxiosError } from "axios"
+import { toast } from "react-toastify"
+import ImageUpload from "../../../utils/Cloudinary"
+import type { ILanguage } from "../../../interfaces/admin"
 
 interface Category {
-  _id: string;
-  name: string;
-  description?: string;
+  _id: string
+  name: string
+  description?: string
 }
 
+
+
 interface FormValues {
-  courseTitle: string;
-  category: string;
-  language: string;
-  description: string;
-  price: number;
-  image: File | null;
+  courseTitle: string
+  category: string
+  language: string
+  description: string
+  price: number
+  image: File | null
+ 
 }
 
 const validationSchema = Yup.object({
@@ -41,25 +47,36 @@ const validationSchema = Yup.object({
   image: Yup.mixed<File>()
     .required("Course image is required")
     .test("fileSize", "File size too large", (value) => {
-      if (!value || !(value instanceof File)) return false;
-      return value.size <= 5 * 1024 * 1024;
+      if (!value || !(value instanceof File)) return false
+      return value.size <= 5 * 1024 * 1024
     })
     .test("fileType", "Unsupported file format", (value) => {
-      if (!value || !(value instanceof File)) return false;
-      return ["image/jpeg", "image/png", "image/gif"].includes(value.type);
+      if (!value || !(value instanceof File)) return false
+      return ["image/jpeg", "image/png", "image/gif"].includes(value.type)
     }),
-});
+  syllabus: Yup.array()
+    .of(
+      Yup.object({
+        title: Yup.string()
+          .min(3, "Syllabus item title must be at least 3 characters")
+          .max(100, "Syllabus item title must not exceed 100 characters")
+          .required("Syllabus item title is required"),
+        description: Yup.string().max(500, "Syllabus item description must not exceed 500 characters").optional(),
+      }),
+    )
+    .min(1, "At least one syllabus item is required")
+    .required("Syllabus is required"),
+})
 
 const AddCourse: React.FC = () => {
-  const navigate = useNavigate();
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [languages, setLanguages] = useState<ILanguage[]>([]);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [generalError, setGeneralError] = useState<string | null>(null);
+  const navigate = useNavigate()
+  const [categories, setCategories] = useState<Category[]>([])
+  const [languages, setLanguages] = useState<ILanguage[]>([])
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [generalError, setGeneralError] = useState<string | null>(null)
 
-
-  const tutor = useSelector((state: RootState) => state.tutor.tutor); 
-  const tutorId = tutor?._id; 
+  const tutor = useSelector((state: RootState) => state.tutor.tutor)
+  const tutorId = tutor?._id
 
   const initialValues: FormValues = {
     courseTitle: "",
@@ -68,52 +85,41 @@ const AddCourse: React.FC = () => {
     description: "",
     price: 0,
     image: null,
-  };
+   
+  }
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const categoryResponse = await listCategories();
-        console.log("Category Response:", categoryResponse);
+        const categoryResponse = await listCategories()
         if (categoryResponse.success && categoryResponse.data && "categories" in categoryResponse.data) {
-          setCategories(categoryResponse.data.categories as Category[]);
-          console.log("Categories set:", categoryResponse.data.categories);
+          setCategories(categoryResponse.data.categories as Category[])
         } else {
-          console.warn("No categories found in response");
+          console.warn("No categories found in response")
         }
 
-        const languageResponse = await listLanguage();
-        console.log("Language Response:", languageResponse);
-        if (
-          languageResponse.success &&
-          languageResponse.data &&
-          Array.isArray(languageResponse.data.languages)
-        ) {
-          setLanguages(languageResponse.data.languages);
-          console.log("Languages set:", languageResponse.data.languages);
+        const languageResponse = await listLanguage()
+        if (languageResponse.success && languageResponse.data && Array.isArray(languageResponse.data.languages)) {
+          setLanguages(languageResponse.data.languages)
         } else {
-          console.warn("No languages found or invalid response format:", languageResponse);
-          toast.error("No languages available");
+          console.warn("No languages found or invalid response format:", languageResponse)
+          toast.error("No languages available")
         }
       } catch (err) {
-        console.error("Error fetching data:", err);
-        toast.error("Error fetching data: " + (err instanceof Error ? err.message : "Unknown error"));
+        console.error("Error fetching data:", err)
+        toast.error("Error fetching data: " + (err instanceof Error ? err.message : "Unknown error"))
       }
-    };
-    fetchData();
-  }, []);
+    }
+    fetchData()
+  }, [])
 
   const handleSubmit = async (values: FormValues, { setSubmitting }: any) => {
-    console.log("Form submission started with values:", values);
-    setSubmitting(true);
-    setGeneralError(null);
+    setSubmitting(true)
+    setGeneralError(null)
 
     try {
-      console.log("Uploading image...");
-      const imageUrl = await ImageUpload(values.image!);
-      console.log("Image URL:", imageUrl);
+      const imageUrl = await ImageUpload(values.image!)
 
-      
       const courseData = {
         courseTitle: values.courseTitle,
         imageUrl,
@@ -121,152 +127,148 @@ const AddCourse: React.FC = () => {
         language: values.language,
         description: values.description,
         regularPrice: values.price,
-        tutorId: tutorId || "", 
-      };
-      console.log("Sending course data:", courseData);
+        tutorId: tutorId || "",
+     
+      }
 
-      const result = await addCourse(courseData);
-      console.log("API result:", result);
-
+      const result = await addCourse(courseData)
       if (result.success) {
-        console.log("Success! Navigating...");
-        toast.success(result.message);
-        navigate("/tutor/listCourse");
+        toast.success(result.message)
+        navigate("/tutor/listCourse")
       } else {
-        console.log("API returned success: false", result);
-        throw new Error("API did not return success");
+        throw new Error("API did not return success")
       }
     } catch (error) {
-      const axiosError = error as AxiosError<{ error?: string }>;
-      const errorMessage = axiosError.response?.data?.error || axiosError.message || "Failed to add course";
-      console.error("Error:", errorMessage, axiosError.response?.data);
-      setGeneralError(errorMessage);
-      toast.error(errorMessage);
+      const axiosError = error as AxiosError<{ error?: string }>
+      const errorMessage = axiosError.response?.data?.error || axiosError.message || "Failed to add course"
+      setGeneralError(errorMessage)
+      toast.error(errorMessage)
     } finally {
-      setSubmitting(false);
-      console.log("Submission complete");
+      setSubmitting(false)
     }
-  };
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900 flex flex-col">
+    <div className="min-h-screen bg-[#CFB0B0] flex flex-col">
       <div className="flex-1 flex p-6">
         <div className="flex-1">
-          <div className="max-w-4xl mx-auto bg-gray-800 p-8 shadow-lg rounded-lg border-2 border-gray-700">
+          <div className="max-w-4xl mx-auto bg-white p-8 shadow-lg rounded-lg border border-gray-200">
             <div className="text-center mb-8">
-              <h1 className="text-3xl font-extrabold text-yellow-400">Add New Course</h1>
-              <div className="w-16 h-1 bg-green-500 mx-auto mt-2 rounded-full"></div>
+              <h1 className="text-3xl font-extrabold text-gray-800">Add New Course</h1>
+              <div className="w-16 h-1 bg-emerald-500 mx-auto mt-2 rounded-full"></div>
             </div>
 
             <Formik initialValues={initialValues} validationSchema={validationSchema} onSubmit={handleSubmit}>
-              {({ isSubmitting, setFieldValue }) => (
+              {({ isSubmitting, values }) => (
                 <Form className="space-y-6">
                   <div className="mb-6">
-                    <label className="block text-cyan-400 font-medium mb-2">Course Title</label>
+                    <label className="block text-gray-700 font-medium mb-2">Course Title</label>
                     <Field
                       type="text"
                       name="courseTitle"
-                      className="w-full px-4 py-3 border border-gray-600 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                       placeholder="Enter course title"
                     />
-                    <ErrorMessage name="courseTitle" component="p" className="text-red-400 text-sm mt-1" />
+                    <ErrorMessage name="courseTitle" component="p" className="text-red-500 text-sm mt-1" />
                   </div>
 
                   <div className="mb-6">
-                    <label className="block text-cyan-400 font-medium mb-2">Course Category</label>
+                    <label className="block text-gray-700 font-medium mb-2">Course Category</label>
                     <Field
                       as="select"
                       name="category"
-                      className="w-full px-4 py-3 border border-gray-600 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                     >
-                      <option value="" className="text-gray-400">
+                      <option value="" className="text-gray-500">
                         Select a category
                       </option>
                       {categories.map((cat) => (
-                        <option key={cat._id} value={cat._id} className="text-white bg-gray-700">
+                        <option key={cat._id} value={cat._id} className="text-gray-800">
                           {cat.name}
                         </option>
                       ))}
                     </Field>
-                    <ErrorMessage name="category" component="p" className="text-red-400 text-sm mt-1" />
+                    <ErrorMessage name="category" component="p" className="text-red-500 text-sm mt-1" />
                   </div>
 
                   <div className="mb-6">
-                    <label className="block text-cyan-400 font-medium mb-2">Course Language</label>
+                    <label className="block text-gray-700 font-medium mb-2">Course Language</label>
                     <Field
                       as="select"
                       name="language"
-                      className="w-full px-4 py-3 border border-gray-600 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                     >
-                      <option value="" className="text-gray-400">
+                      <option value="" className="text-gray-500">
                         Select a language
                       </option>
                       {languages.map((lang) => (
-                        <option key={lang._id} value={lang._id} className="text-white bg-gray-700">
+                        <option key={lang._id} value={lang._id} className="text-gray-800">
                           {lang.name}
                         </option>
                       ))}
                     </Field>
-                    <ErrorMessage name="language" component="p" className="text-red-400 text-sm mt-1" />
+                    <ErrorMessage name="language" component="p" className="text-red-500 text-sm mt-1" />
                   </div>
 
                   <div className="mb-6">
-                    <label className="block text-cyan-400 font-medium mb-2">Description</label>
+                    <label className="block text-gray-700 font-medium mb-2">Description</label>
                     <Field
                       as="textarea"
                       name="description"
-                      className="w-full px-4 py-3 border border-gray-600 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                       placeholder="Enter course description"
                       rows={4}
                     />
-                    <ErrorMessage name="description" component="p" className="text-red-400 text-sm mt-1" />
+                    <ErrorMessage name="description" component="p" className="text-red-500 text-sm mt-1" />
                   </div>
 
                   <div className="mb-6">
-                    <label className="block text-cyan-400 font-medium mb-2">Regular Price</label>
+                    <label className="block text-gray-700 font-medium mb-2">Regular Price</label>
                     <Field
                       type="number"
                       name="price"
-                      className="w-full px-4 py-3 border border-gray-600 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                       placeholder="Enter regular price"
                       min="1"
                       step="0.01"
                     />
-                    <ErrorMessage name="price" component="p" className="text-red-400 text-sm mt-1" />
+                    <ErrorMessage name="price" component="p" className="text-red-500 text-sm mt-1" />
                   </div>
 
+                 
+
                   <div className="mb-6">
-                    <label className="block text-cyan-400 font-medium mb-2">Course Image</label>
+                    <label className="block text-gray-700 font-medium mb-2">Course Image</label>
                     <input
                       type="file"
                       accept="image/*"
                       onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
-                        const file = event.target.files?.[0] || null;
-                        setFieldValue("image", file);
+                        const file = event.target.files?.[0] || null
+                        values.image = file
                         if (file) {
-                          setImagePreview(URL.createObjectURL(file));
+                          setImagePreview(URL.createObjectURL(file))
                         } else {
-                          setImagePreview(null);
+                          setImagePreview(null)
                         }
                       }}
-                      className="w-full px-4 py-3 border border-gray-600 rounded-lg bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-500 file:text-white hover:file:bg-blue-600"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-emerald-500 file:text-white hover:file:bg-emerald-600"
                     />
                     {imagePreview && (
                       <img
-                        src={imagePreview}
+                        src={imagePreview || "/placeholder.svg"}
                         alt="Image Preview"
-                        className="w-32 h-32 object-cover rounded-lg border border-gray-600 shadow-md mt-2"
+                        className="w-32 h-32 object-cover rounded-lg border border-gray-300 shadow-md mt-2"
                       />
                     )}
-                    <ErrorMessage name="image" component="p" className="text-red-400 text-sm mt-1" />
+                    <ErrorMessage name="image" component="p" className="text-red-500 text-sm mt-1" />
                   </div>
 
-                  {generalError && <p className="text-red-400 text-sm mb-4 text-center">{generalError}</p>}
+                  {generalError && <p className="text-red-500 text-sm mb-4 text-center">{generalError}</p>}
 
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full bg-cyan-600 text-white py-3 px-6 rounded-lg hover:bg-cyan-700 transition duration-300"
+                    className="w-full bg-emerald-600 text-white py-3 px-6 rounded-lg hover:bg-emerald-700 transition duration-300"
                   >
                     {isSubmitting ? "Adding Course..." : "Add Course"}
                   </button>
@@ -277,7 +279,7 @@ const AddCourse: React.FC = () => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default AddCourse;
+export default AddCourse

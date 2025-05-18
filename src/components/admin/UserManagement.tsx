@@ -48,6 +48,14 @@ const UserManagement: React.FC = () => {
 
 
   const handleBlockUnblock = async (userId: string, currentStatus: boolean) => {
+    const action = currentStatus ? "unblock" : "block";
+    const confirmMessage = `Are you sure you want to ${action} this user?`;
+    const isConfirmed = window.confirm(confirmMessage);
+
+    if (!isConfirmed) {
+      return; 
+    }
+
     try {
       await blockUnblock(userId, !currentStatus);
       setUsers((prevUsers) =>
@@ -55,13 +63,15 @@ const UserManagement: React.FC = () => {
           user._id === userId ? { ...user, isBlocked: !currentStatus } : user
         )
       );
-      toast.success(!currentStatus ? "User blocked successfully" : "User unblocked successfully");
+      toast.success(
+        !currentStatus ? "User blocked successfully" : "User unblocked successfully"
+      );
     } catch (error) {
       console.error("Error updating user status:", error);
       setError("Failed to update user status");
+      toast.error("Failed to update user status");
     }
   };
-
   const totalPages = Math.ceil(totalUsers / itemsPerPage);
 
   const handlePageChange = (page: number) => {
@@ -98,6 +108,7 @@ const UserManagement: React.FC = () => {
                         user.isBlocked ? "bg-red-200 text-red-600" : "bg-green-200 text-green-600"
                       }`}
                     >
+
                       {user.isBlocked ? "Blocked" : "Active"}
                     </span>
                   </td>

@@ -19,10 +19,9 @@ interface Tutor {
   profilePicture?: string;
 }
 
-
 export interface IEnrolledCourse extends ICourse {
   pricePaid: number;
-  enrolledDate?: string; 
+  enrolledDate?: string;
   status: "Active" | "Cancelled" | "Expired";
 }
 
@@ -54,7 +53,7 @@ const EnrolledCourses: React.FC = () => {
         console.log("Courses received:", response.courses);
         response.courses.forEach((course, index) => {
           console.log(`Course ${index + 1} tutor:`, course.tutor);
-          console.log(`Course ${index + 1} tutorId:`, course.tutor);
+          console.log(`Course ${index + 1} tutorId:`, course.tutor?._id);
         });
         setEnrolledCourses(response.courses);
         if (response.courses.length === 0) {
@@ -117,8 +116,13 @@ const EnrolledCourses: React.FC = () => {
   };
 
   const handleChatWithTutor = (tutorId: string, tutorName: string) => {
-    navigate(`/chat?tutorId=${encodeURIComponent(tutorId)}`);
+    if (!tutorId) {
+      toast.error("Invalid tutor ID");
+      console.error("Invalid tutorId:", tutorId);
+      return;
+    }
     console.log(`Initiating chat with tutor: ${tutorName} (${tutorId})`);
+    navigate(`/chat?tutorId=${encodeURIComponent(tutorId)}`);
   };
 
   const isCancelEligible = (enrolledDate: string | undefined): boolean => {
@@ -246,14 +250,14 @@ const EnrolledCourses: React.FC = () => {
                     <Button
                       onClick={() => handleCancelEnrollment(course._id, course.courseTitle)}
                       className="flex-1 bg-red-500 hover:bg-red-600"
-                      // disabled={course.status !== "Active" || !isCancelEligible(course.enrolledDate)}
-                      // title={
-                      //   !isCancelEligible(course.enrolledDate)
-                      //     ? "Refund period has expired (7 days)"
-                      //     : course.status !== "Active"
-                      //       ? "Cancellation not available for this status"
-                      //       : ""
-                      // }
+                      disabled={course.status !== "Active" || !isCancelEligible(course.enrolledDate)}
+                      title={
+                        !isCancelEligible(course.enrolledDate)
+                          ? "Refund period has expired (7 days)"
+                          : course.status !== "Active"
+                            ? "Cancellation not available for this status"
+                            : ""
+                      }
                     >
                       Cancel Enrollment
                     </Button>

@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import ChatBox from "../../components/chat/TutorChatbox";
 import { useSelector } from "react-redux";
 import { RootState } from "../../redux/store";
-import ChatSidebar from "../../components/chat/TutorChatSidebar";
 import toast from "react-hot-toast";
 import { fetch_tutor_chats, fetch_tutor_room } from "../../services/tutorChatService";
 import { useSocket } from "../../components/context/socketContext";
+import TutorChatBox from "../../components/chat/TutorChatbox";
+import TutorChatSidebar from "../../components/chat/TutorChatSlidebar";
 
 export interface Contact {
   _id: string;
@@ -33,38 +33,43 @@ export default function TutorChatPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchRoomData = async (receiverId: string) => {
+    if (!receiverId || !tutor?._id) {
+      console.error("Invalid receiverId or tutorId:", { receiverId, tutorId: tutor?._id });
+      toast.error("Invalid user or tutor data");
+      return;
+    }
+
     try {
-      if (!tutor?._id) {
-        throw new Error("Tutor ID is required");
-      }
+      console.log("Fetching room for:", { receiverId, senderId: tutor._id });
       const response = await fetch_tutor_room(receiverId, tutor._id);
-      console.log("fetch_tutor_room response:", response);
+      console.log("fetch_tutor_room response:", JSON.stringify(response, null, 2));
       if (response.success && response.room?._id) {
         setSelectedRoomId(response.room._id);
         setSelectedUserId(receiverId);
-        navigate(`/tutor/chatPage?userId=${receiverId}`);
+        navigate(`/tutor/chatPage?userId=${encodeURIComponent(receiverId)}`);
       } else {
-        toast.error("Failed to load chat room");
+        console.error("Invalid room response:", response);
+        toast.error(response.message || "Failed to load chat room");
       }
     } catch (error: any) {
-      console.error("Error fetching room:", error);
-      if (error.response?.status === 401) {
-        toast.error("Session expired. Please log in again.");
-        navigate("/tutor/login");
-      } else {
-        toast.error("Error loading chat room");
-      }
+      console.error("Error fetching room:", {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+      });
+      toast.error("Error loading chat room: " + (error.message || "Unknown error"));
     }
   };
 
   const fetchData = async () => {
     try {
       if (!tutor?._id) {
-        throw new Error("Tutor ID is required");
+        console.error("No tutor ID available");
+        return;
       }
       setIsLoading(true);
       const chatsResponse = await fetch_tutor_chats(tutor._id, searchTerm);
-      console.log("fetch_tutor_chats response:", chatsResponse);
+      console.log("fetch_tutor_chats response:", JSON.stringify(chatsResponse, null, 2));
       if (chatsResponse.success) {
         const updatedChats = chatsResponse.users.map((chat: any) => ({
           ...chat,
@@ -73,25 +78,22 @@ export default function TutorChatPage() {
         }));
         setChats(updatedChats);
       } else {
-        toast.error("Failed to load chats");
+        toast.error(chatsResponse.message || "Failed to load chats");
       }
     } catch (error: any) {
-      console.error("Error fetching chats:", error);
-      if (error.response?.status === 401) {
-        toast.error("Session expired. Please log in again.");
-        navigate("/tutor/login");
-      } else {
-        toast.error("Error loading chats");
-      }
+      console.error("Error fetching chats:", {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+      });
+      toast.error("Error loading chats: " + (error.message || "Unknown error"));
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    console.log("Tutor state:", tutor);
     if (!tutor?._id) {
-      console.log("No tutor ID, redirecting to /tutor/login");
       toast.error("Please log in to access chat");
       navigate("/tutor/login");
       return;
@@ -101,12 +103,12 @@ export default function TutorChatPage() {
 
   useEffect(() => {
     if (!tutor?._id) {
-      console.log("No tutor ID, redirecting to /tutor/login");
       toast.error("Please log in to access chat");
       navigate("/tutor/login");
       return;
     }
     if (userId) {
+      console.log("UserId from URL:", userId);
       fetchRoomData(userId);
     }
   }, [userId, tutor?._id, navigate]);
@@ -116,7 +118,7 @@ export default function TutorChatPage() {
     const selectedChat = chats.find((chat) => chat.chatId === newRoomId);
     if (selectedChat) {
       setSelectedUserId(selectedChat._id);
-      navigate(`/tutor/chatPage?userId=${selectedChat._id}`);
+      navigate(`/tutor/chatPage?userId=${encodeURIComponent(selectedChat._id)}`);
     }
   };
 
@@ -145,7 +147,7 @@ export default function TutorChatPage() {
         </div>
       ) : (
         <>
-          <ChatSidebar
+          <TutorChatSidebar
             onSelectRoom={handleSelectRoom}
             chats={chats}
             setChats={setChats}
@@ -153,7 +155,7 @@ export default function TutorChatPage() {
           />
           <div className="flex-1">
             {selectedRoomId ? (
-              <ChatBox
+              <TutorChatBox
                 roomId={selectedRoomId}
                 initiateCall={initiateCall}
                 answerCall={answerCall}

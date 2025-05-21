@@ -1,4 +1,3 @@
-
 import { Avatar, Badge, ScrollShadow } from "@nextui-org/react";
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import SearchInput from "../UI/SearchInput";
@@ -44,7 +43,7 @@ export default function ChatSidebar({ onSelectRoom, chats, setChats, setSearchTe
           message.senderId === chat._id
             ? {
                 ...chat,
-                lastMessage: message.message,
+                lastMessage: message.message, // Correct: Use message.message (string)
                 lastMessageRead: message.isRead || false,
               }
             : chat
@@ -140,7 +139,13 @@ export default function ChatSidebar({ onSelectRoom, chats, setChats, setSearchTe
             <div className="flex items-center">
               {user.lastMessage && (
                 <>
-                  <p className="text-xs text-gray-500 truncate flex-1">{user.lastMessage}</p>
+                  <p className="text-xs text-gray-500 truncate flex-1">
+                  {typeof user.lastMessage === "string"
+                    ? user.lastMessage
+                    : user.lastMessage && "message" in user.lastMessage
+                    ? user.lastMessage.message
+                    : "No message"}
+                </p>
                   <span className="flex items-center ml-2">
                     {!user.isOnline ? (
                       <Check className="h-3 w-3 text-gray-400" />

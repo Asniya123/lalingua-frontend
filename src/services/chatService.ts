@@ -28,8 +28,16 @@ export const fetch_room_message = async (roomId: string, userId: string | undefi
             throw new Error("User ID and Room ID are required");
         }
         const response = await API.get(`/chat/room-message/${roomId}/${userId}`);
+        if (!response.data.success) {
+            throw new Error(response.data.message || "Failed to fetch room messages");
+        }
         return response.data;
-    } catch (error) {
+    } catch (error: any) {
+        console.error("Error in fetch_room_message:", {
+            message: error.message,
+            response: error.response?.data,
+            status: error.response?.status,
+        });
         throw error;
     }
 };

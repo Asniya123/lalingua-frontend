@@ -4,7 +4,7 @@ export default interface Chat {
     _id: string;
     participants: string[] | Student[];
     messages: string[] | Message[];
-    lastMessage: string | Message;
+    lastMessage?: string | Message;
   }
   
   export interface Message {
@@ -25,3 +25,24 @@ export default interface Chat {
     isCallModalVisible: boolean;
   }
   
+
+
+// export interface IMessage {
+//   _id: string;
+//   senderId: string;
+//   content: string;
+//   messageType: 'text' | 'image' | 'video' | 'file'; 
+//   createdAt: string; 
+//   isRead: boolean; 
+// }
+
+// export interface IChatRoom {
+//   _id: string;
+//   participants: string[]; 
+//   messages: IMessage[];
+//   lastMessage?: IMessage | null; 
+//   createdAt: string;
+//   updatedAt: string;
+// }
+
+

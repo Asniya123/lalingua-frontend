@@ -1,83 +1,79 @@
-import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { useSelector } from "react-redux";
 import { io, Socket } from "socket.io-client";
 import { RootState } from "../../redux/store";
+
 
 interface SocketContextType {
   socket: Socket | null;
   onlineUsers: string[];
 }
 
-export interface LoggedUser {
-  _id: string;
-  role: "student" | "admin" | "tutor";
-}
-
-let globalSocket: Socket | null = null;
-
 const SocketContext = createContext<SocketContextType>({
   socket: null,
   onlineUsers: [],
 });
 
-const hasId = (user: any): user is { _id: string } => {
-  return user && typeof user._id === "string";
-};
-
-export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
-  const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
+export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const socketRef = useRef<Socket | null>(null);
   const [socket, setSocket] = useState<Socket | null>(null);
+  const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
 
-  const student = useSelector((state: RootState) => state.auth.student);
-  const admin = useSelector((state: RootState) => state.admin.adminId);
-  const tutor = useSelector((state: RootState) => state.tutor.tutor);
+  const user = useSelector((state: RootState) => state.auth.student);
+  const admin = useSelector((state: RootState) => state.admin);
+  const tutor = useSelector((state: RootState) => state.tutor);
+  const loggedUser = user || admin || tutor;
 
-  const getLoggedInUser = () => student || admin || tutor;
-
-  const getRole = useCallback((): LoggedUser["role"] | null => {
-    if (student) return "student";
+  const getRole = React.useCallback((): string | null => {
+    if (user) return "user";
     if (admin) return "admin";
-    if (tutor) return "tutor";
+    if (tutor) return "agent";
     return null;
-  }, [student, admin, tutor]);
+  }, [user, admin, tutor]);
 
   useEffect(() => {
-    const loggedUser = getLoggedInUser();
-    const role = getRole();
-
-    if (hasId(loggedUser) && role && !globalSocket) {
+    if (loggedUser && "_id" in loggedUser) {
+      const role = getRole();
       const newSocket = io("http://localhost:5000", {
-        withCredentials: true,
         query: {
           userId: loggedUser._id,
           role,
         },
       });
 
-      globalSocket = newSocket;
+      socketRef.current = newSocket;
       setSocket(newSocket);
 
       newSocket.on("connect", () => {
-        console.log("Socket connected");
+        console.log("Socket connected:", newSocket.id);
       });
 
-      newSocket.on("get-online-users", (users: string[]) => {
+      newSocket.on("get-online-users", (users) => {
         setOnlineUsers(users);
       });
 
       newSocket.on("connect_error", (err) => {
-        console.error("Socket error:", err);
+        console.error("Socket connection error:", err.message);
       });
 
       newSocket.on("disconnect", (reason) => {
         console.warn("Socket disconnected:", reason);
       });
-    }
 
-    return () => {
-      // Don't disconnect globalSocket on unmount if you want persistence
-    };
-  }, [getRole]);
+      return () => {
+        newSocket.off("get-online-users");
+        newSocket.disconnect();
+      };
+    }
+  }, [getRole, loggedUser]);
 
   return (
     <SocketContext.Provider value={{ socket, onlineUsers }}>
@@ -85,7 +81,6 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     </SocketContext.Provider>
   );
 };
-
 
 export const useSocket = (): SocketContextType => {
   const context = useContext(SocketContext);

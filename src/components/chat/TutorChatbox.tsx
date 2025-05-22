@@ -69,84 +69,82 @@ export default function TutorChatBox({
     }
 
     const fetchRecieverData = async () => {
-      try {
-        setIsLoading(true);
-        console.log("fetchRecieverData called with:", { roomId, tutorId: tutor._id });
-        const response = await fetch_tutor_room_message(roomId, tutor._id);
-        console.log("fetch_tutor_room_message response:", JSON.stringify(response, null, 2));
+  try {
+    setIsLoading(true);
+    console.log("fetchRecieverData called with:", { roomId, tutorId: tutor._id });
+    const response = await fetch_tutor_room_message(roomId, tutor._id);
+    console.log("fetch_tutor_room_message response:", JSON.stringify(response, null, 2));
 
-        if (response.success && response.room) {
-          let roomData = response.room;
-          if (Array.isArray(roomData)) {
-            console.warn("Received room as array, using first element:", roomData);
-            roomData = roomData[0] || {};
-          }
-          if (!roomData || !Array.isArray(roomData.participants)) {
-            throw new Error("Invalid room data: missing or invalid participants");
-          }
-          console.log(roomData, "room Data");
-          const otherParticipant = roomData.participants.find(
-            (p: { _id: string }) => p._id !== tutor._id
-          );
-          if (!otherParticipant) {
-            throw new Error("No other participant found in room");
-          }
-
-          setReciever({
-            _id: otherParticipant._id,
-            name: roomData.name || otherParticipant.name || otherParticipant.username || "Unknown",
-            profilePicture: roomData.profilePicture || otherParticipant.profilePicture || "/logos/avatar.avif",
-          });
-
-          setMessages(Array.isArray(roomData.messages) ? roomData.messages : []);
-          if (socket) {
-            socket.emit("mark-messages-read", { chatId: roomId, userId: tutor._id });
-          }
-        } else if (userId) {
-          console.log("Falling back to fetch_tutor_room with userId:", userId);
-          const roomResponse = await fetch_tutor_room(userId, tutor._id);
-          console.log("fetch_tutor_room response:", roomResponse);
-          if (roomResponse.success && roomResponse.room) {
-            let roomData = roomResponse.room;
-            console.log(roomData, "user-----------");
-            if (Array.isArray(roomData)) {
-              console.warn("Received room as array in fallback, using first element:", roomData);
-              roomData = roomData[0] || {};
-            }
-            if (!roomData || !Array.isArray(roomData.participants)) {
-              throw new Error("Invalid room data in fallback: missing or invalid participants");
-            }
-            const user = roomData.participants.find(
-              (u: { _id: string }) => u._id !== tutor._id
-            );
-            if (user) {
-              setReciever({
-                _id: user._id,
-                name: user.name || user.username || "Unknown",
-                profilePicture: user.profilePicture || "/logos/avatar.avif",
-              });
-              setMessages(Array.isArray(roomData.messages) ? roomData.messages : []);
-            } else {
-              toast.error("Failed to load user data");
-            }
-          } else {
-            toast.error("Failed to load room data");
-          }
-        } else {
-          toast.error("No user found for this chat");
-        }
-      } catch (error: any) {
-        console.error("Error fetching room messages:", {
-          message: error.message,
-          response: error.response?.data,
-          status: error.response?.status,
-          responseMessage: error.response?.data?.message
-        });
-        toast.error("Error loading chat room");
-      } finally {
-        setIsLoading(false);
+    if (response.success && response.room) {
+      let roomData = response.room;
+      if (Array.isArray(roomData)) {
+        console.warn("Received room as array, using first element:", roomData);
+        roomData = roomData[0] || {};
       }
-    };
+      if (!roomData || !Array.isArray(roomData.participants)) {
+        throw new Error("Invalid room data: missing or invalid participants");
+      }
+      const otherParticipant = roomData.participants.find(
+        (p: { _id: string }) => p._id !== tutor._id
+      );
+      if (!otherParticipant) {
+        throw new Error("No other participant found in room");
+      }
+
+      setReciever({
+        _id: otherParticipant._id,
+        name: otherParticipant.name || otherParticipant.username || "Unknown",
+        profilePicture: otherParticipant.profilePicture || "/logos/avatar.avif",
+      });
+
+      setMessages(Array.isArray(roomData.messages) ? roomData.messages : []);
+      if (socket) {
+        socket.emit("mark-messages-read", { chatId: roomId, userId: tutor._id });
+      }
+    } else if (userId) {
+      console.log("Falling back to fetch_tutor_room with userId:", userId);
+      const roomResponse = await fetch_tutor_room(userId, tutor._id);
+      console.log("fetch_tutor_room response:", JSON.stringify(roomResponse, null, 2));
+      if (roomResponse.success && roomResponse.room) {
+        let roomData = roomResponse.room;
+        if (Array.isArray(roomData)) {
+          console.warn("Received room as array in fallback, using first element:", roomData);
+          roomData = roomData[0] || {};
+        }
+        if (!roomData || !Array.isArray(roomData.participants)) {
+          throw new Error("Invalid room data in fallback: missing or invalid participants");
+        }
+        const user = roomData.participants.find(
+          (u: { _id: string }) => u._id !== tutor._id
+        );
+        if (user) {
+          setReciever({
+            _id: user._id,
+            name: user.name || user.username || "Unknown",
+            profilePicture: user.profilePicture || "/logos/avatar.avif",
+          });
+          setMessages(Array.isArray(roomData.messages) ? roomData.messages : []);
+        } else {
+          toast.error("Failed to load user data");
+        }
+      } else {
+        toast.error("Failed to load room data");
+      }
+    } else {
+      toast.error("No user found for this chat");
+    }
+  } catch (error: any) {
+    console.error("Error fetching room messages:", {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status,
+      responseMessage: error.response?.data?.message || "No response message",
+    });
+    toast.error(`Error loading chat room: ${error.response?.data?.message || error.message}`);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
     fetchRecieverData();
   }, [roomId, socket, tutor?._id, userId]);

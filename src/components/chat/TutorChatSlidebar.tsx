@@ -71,11 +71,13 @@ export default function TutorChatSidebar({ onSelectRoom, chats, setChats, setSea
   const handleRoomSelection = async (receiverId: string) => {
     try {
       if (!receiverId || !tutor?._id) {
-        throw new Error("Receiver ID or Tutor ID is missing");
+        console.error("Receiver ID or Tutor ID is missing:", { receiverId, tutorId: tutor?._id });
+        toast.error("Receiver ID or Tutor ID is missing");
+        return;
       }
-      console.log("handleRoomSelection called with:", { receiverId, tutorId: tutor?._id });
-      const response = await fetch_tutor_room(receiverId, tutor?._id);
-      console.log("handleRoomSelection response:", response);
+      console.log("handleRoomSelection called with:", { receiverId, tutorId: tutor._id });
+      const response = await fetch_tutor_room(receiverId, tutor._id);
+      console.log("handleRoomSelection response:", JSON.stringify(response, null, 2));
       if (response.success && response.room?._id) {
         setSelectedRoom(response.room._id);
         onSelectRoom(response.room._id);
@@ -95,9 +97,9 @@ export default function TutorChatSidebar({ onSelectRoom, chats, setChats, setSea
         message: error.message,
         response: error.response?.data,
         status: error.response?.status,
-        responseMessage: error.response?.data?.message
+        responseMessage: error.response?.data?.message,
       });
-      toast.error("Error loading chat room");
+      toast.error(error.response?.data?.message || "Error loading chat room");
     }
   };
 
@@ -131,7 +133,7 @@ export default function TutorChatSidebar({ onSelectRoom, chats, setChats, setSea
 
     return users.map((user) => (
       <div
-        key={user._id || user.chatId} // Fallback to chatId if _id is undefined
+        key={user._id || user.chatId}
         className={`p-4 cursor-pointer transition-all duration-200 rounded-lg mx-2 my-1 ${
           selectedRoom === user.chatId
             ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white"

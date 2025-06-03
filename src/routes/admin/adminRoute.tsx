@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router";
+import { Routes, Route } from "react-router-dom";
 import Login from "../../Pages/admin/Login";
 import Home from "../../Pages/admin/home";
 import AddCategory from "../../Pages/admin/AddCategories";

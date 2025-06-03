@@ -1,14 +1,14 @@
 import { Avatar, Badge, ScrollShadow } from "@nextui-org/react";
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
-import SearchInput from "../UI/SearchInput";
-import { fetch_room } from "../../services/chatService";
+import SearchInput from "../../UI/SearchInput";
+import { fetch_room } from "../../../services/chatService";
 import { useSelector } from "react-redux";
-import { RootState } from "../../redux/store";
-import { useSocket } from "../context/socketContext";
-import { Message } from "../../interfaces/chat";
+import { RootState } from "../../../redux/store";
+import { useSocket } from "../../context/useSocket";
+import { Message } from "../../../interfaces/chat";
 import toast from "react-hot-toast";
 import { Check } from "lucide-react";
-import { Contact } from "../../Pages/User/Chat";
+import { Contact } from "../../../Pages/User/Chat";
 
 interface ChatSidebarProps {
   onSelectRoom: (roomId: string) => void;
@@ -43,7 +43,7 @@ export default function ChatSidebar({ onSelectRoom, chats, setChats, setSearchTe
           message.senderId === chat._id
             ? {
                 ...chat,
-                lastMessage: message.message, // Correct: Use message.message (string)
+                lastMessage: message.message, 
                 lastMessageRead: message.isRead || false,
               }
             : chat

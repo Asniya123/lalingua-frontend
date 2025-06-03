@@ -1,26 +1,24 @@
 import { useEffect, useRef, useState } from "react";
 import { Paperclip, Smile, Send, Video, Check } from "lucide-react";
-import { Message } from "../../interfaces/chat";
-import { useSelector } from "react-redux";
-import { RootState } from "../../redux/store";
-import { fetch_tutor_room_message, fetch_tutor_room } from "../../services/tutorChatService";
+import { Message, OutgoingCallPayload, VideoCallPayload } from "../../../interfaces/chat";
+import { useDispatch, useSelector } from "react-redux";
+import { RootState, AppDispatch } from "../../../redux/store";
+import { fetch_tutor_room_message, fetch_tutor_room } from "../../../services/tutorChatService";
 import { format } from "date-fns";
 import toast from "react-hot-toast";
 import EmojiPicker, { EmojiClickData } from "emoji-picker-react";
-import IncommingCallModal from "../videoCall/incomingCall_Modal";
-import { useSocket } from "../context/socketContext";
-import uploadToCloudinary from "../../utils/Cloudinary";
+import { useSocket } from "../../context/useSocket";
+import uploadToCloudinary from "../../../utils/Cloudinary";
 import { CardBody, ScrollShadow } from "@nextui-org/react";
-import { Button } from "../UI/Button";
-import { Card } from "../UI/card";
-import { Input } from "../UI/InputField";
+import { Button } from "../../UI/Button";
+import { Card } from "../../student/UI/card";
+import { Input } from "../../UI/InputField";
+import { setOutgoingCall, setShowOutgoingCall, setVideoCall } from "../../../redux/slice/tutorSlice";
+import OutgoingVideoCall from "./outGoingModal";
 
 interface ChatProps {
   roomId: string;
-  initiateCall: (recieverId: string | undefined) => void;
-  answerCall: () => void;
-  endCall: () => void;
-  isCallModalVisible: boolean;
+  tutorId: string;
   userId?: string;
 }
 
@@ -30,24 +28,18 @@ export interface recieverData {
   profilePicture: string;
 }
 
-export default function TutorChatBox({
-  roomId,
-  initiateCall,
-  answerCall,
-  endCall,
-  isCallModalVisible,
-  userId,
-}: ChatProps) {
+export default function TutorChatBox({ roomId, tutorId, userId }: ChatProps) {
   const tutor = useSelector((state: RootState) => state.tutor.tutor);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [reciever, setReciever] = useState<recieverData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const { socket, onlineUsers } = useSocket();
+  const { socket, onlineUsers, isSocketLoading } = useSocket();
   const isOnline = reciever?._id ? onlineUsers?.includes(reciever._id) : false;
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const [isEmojiPickerVisible, setIsEmojiPickerVisible] = useState(false);
+  const dispatch = useDispatch<AppDispatch>();
 
   const scrollToBottom = () => {
     if (messagesEndRef.current) {
@@ -63,106 +55,106 @@ export default function TutorChatBox({
       return;
     }
 
-    if (socket) {
+    if (socket && !isSocketLoading) {
       socket.emit("joined-room", roomId);
       setMessages([]);
     }
 
     const fetchRecieverData = async () => {
-  try {
-    setIsLoading(true);
-    console.log("fetchRecieverData called with:", { roomId, tutorId: tutor._id });
-    const response = await fetch_tutor_room_message(roomId, tutor._id);
-    console.log("fetch_tutor_room_message response:", JSON.stringify(response, null, 2));
+      try {
+        setIsLoading(true);
+        console.log("fetchRecieverData called with:", { roomId, tutorId: tutor._id });
+        const response = await fetch_tutor_room_message(roomId, tutor._id);
+        console.log("fetch_tutor_room_message response:", JSON.stringify(response, null, 2));
 
-    if (response.success && response.room) {
-      let roomData = response.room;
-      if (Array.isArray(roomData)) {
-        console.warn("Received room as array, using first element:", roomData);
-        roomData = roomData[0] || {};
-      }
-      if (!roomData || !Array.isArray(roomData.participants)) {
-        throw new Error("Invalid room data: missing or invalid participants");
-      }
-      const otherParticipant = roomData.participants.find(
-        (p: { _id: string }) => p._id !== tutor._id
-      );
-      if (!otherParticipant) {
-        throw new Error("No other participant found in room");
-      }
+        if (response.success && response.room) {
+          let roomData = response.room;
+          if (Array.isArray(roomData)) {
+            console.warn("Received room as array, using first element:", roomData);
+            roomData = roomData[0] || {};
+          }
+          if (!roomData || !Array.isArray(roomData.participants)) {
+            throw new Error("Invalid room data: missing or invalid participants");
+          }
+          const otherParticipant = roomData.participants.find(
+            (p: { _id: string }) => p._id !== tutor._id
+          );
+          if (!otherParticipant) {
+            throw new Error("No other participant found in room");
+          }
 
-      setReciever({
-        _id: otherParticipant._id,
-        name: otherParticipant.name || otherParticipant.username || "Unknown",
-        profilePicture: otherParticipant.profilePicture || "/logos/avatar.avif",
-      });
-
-      setMessages(Array.isArray(roomData.messages) ? roomData.messages : []);
-      if (socket) {
-        socket.emit("mark-messages-read", { chatId: roomId, userId: tutor._id });
-      }
-    } else if (userId) {
-      console.log("Falling back to fetch_tutor_room with userId:", userId);
-      const roomResponse = await fetch_tutor_room(userId, tutor._id);
-      console.log("fetch_tutor_room response:", JSON.stringify(roomResponse, null, 2));
-      if (roomResponse.success && roomResponse.room) {
-        let roomData = roomResponse.room;
-        if (Array.isArray(roomData)) {
-          console.warn("Received room as array in fallback, using first element:", roomData);
-          roomData = roomData[0] || {};
-        }
-        if (!roomData || !Array.isArray(roomData.participants)) {
-          throw new Error("Invalid room data in fallback: missing or invalid participants");
-        }
-        const user = roomData.participants.find(
-          (u: { _id: string }) => u._id !== tutor._id
-        );
-        if (user) {
           setReciever({
-            _id: user._id,
-            name: user.name || user.username || "Unknown",
-            profilePicture: user.profilePicture || "/logos/avatar.avif",
+            _id: otherParticipant._id,
+            name: otherParticipant.name || otherParticipant.username || "Unknown",
+            profilePicture: otherParticipant.profilePicture || "/logos/avatar.x",
           });
+
           setMessages(Array.isArray(roomData.messages) ? roomData.messages : []);
+          if (socket && !isSocketLoading) {
+            socket.emit("mark-messages-read", { chatId: roomId, userId: tutor._id });
+          }
+        } else if (userId) {
+          console.log("Falling back to fetch_tutor_room with userId:", userId);
+          const roomResponse = await fetch_tutor_room(userId, tutor._id);
+          console.log("fetch_tutor_room response:", JSON.stringify(roomResponse, null, 2));
+          if (roomResponse.success && roomResponse.room) {
+            let roomData = roomResponse.room;
+            if (Array.isArray(roomData)) {
+              console.warn("Received room as array in fallback, using first element:", roomData);
+              roomData = roomData[0] || {};
+            }
+            if (!roomData || !Array.isArray(roomData.participants)) {
+              throw new Error("Invalid room data in fallback: missing or invalid participants");
+            }
+            const user = roomData.participants.find((u: { _id: string }) => u._id !== tutor._id);
+            if (user) {
+              setReciever({
+                _id: user._id,
+                name: user.name || user.username || "Unknown",
+                profilePicture: user.profilePicture || "/logos/avatar.x",
+              });
+              setMessages(Array.isArray(roomData.messages) ? roomData.messages : []);
+            } else {
+              toast.error("Failed to load user data");
+            }
+          } else {
+            toast.error("Failed to load room data");
+          }
         } else {
-          toast.error("Failed to load user data");
+          toast.error("No user found for this chat");
         }
-      } else {
-        toast.error("Failed to load room data");
+      } catch (error: any) {
+        console.error("Error fetching room messages:", {
+          message: error.message,
+          response: error.response?.data,
+          status: error.response?.status,
+          responseMessage: error.response?.data?.message || "No response message",
+        });
+        toast.error(`Error loading chat room: ${error.response?.data?.message || error.message}`);
+      } finally {
+        setIsLoading(false);
       }
-    } else {
-      toast.error("No user found for this chat");
-    }
-  } catch (error: any) {
-    console.error("Error fetching room messages:", {
-      message: error.message,
-      response: error.response?.data,
-      status: error.response?.status,
-      responseMessage: error.response?.data?.message || "No response message",
-    });
-    toast.error(`Error loading chat room: ${error.response?.data?.message || error.message}`);
-  } finally {
-    setIsLoading(false);
-  }
-};
+    };
 
     fetchRecieverData();
-  }, [roomId, socket, tutor?._id, userId]);
+  }, [roomId, socket, tutor?._id, userId, dispatch, isSocketLoading]);
 
   useEffect(() => {
-    if (!socket) return;
+    if (!socket || isSocketLoading) return;
 
-    socket.on("new-message", (message: Message) => {
+    const handleNewMessage = (message: Message) => {
       console.log("New message received:", message);
       if (message.senderId === reciever?._id) {
         setMessages((prev) => [...prev, message]);
-        if (document.visibilityState === "visible") {
-          socket.emit("mark-messages-read", { chatId: roomId, userId: tutor?._id });
+        if (document.visibilityState === "visible" && tutor?._id) {
+          socket.emit("mark-messages-read", { chatId: roomId, userId: tutor._id });
+        } else if (!tutor?._id) {
+          console.warn("Cannot mark messages as read: tutor is null or missing _id");
         }
       }
-    });
+    };
 
-    socket.on("message-read", (data: { chatId: string; userId: string }) => {
+    const handleMessageRead = (data: { chatId: string; userId: string }) => {
       if (data.chatId === roomId && data.userId === reciever?._id) {
         setMessages((prev) =>
           prev.map((msg) =>
@@ -170,13 +162,16 @@ export default function TutorChatBox({
           )
         );
       }
-    });
+    };
+
+    socket.on("new-message", handleNewMessage);
+    socket.on("message-read", handleMessageRead);
 
     return () => {
-      socket.off("new-message");
-      socket.off("message-read");
+      socket.off("new-message", handleNewMessage);
+      socket.off("message-read", handleMessageRead);
     };
-  }, [socket, reciever?._id, roomId, tutor?._id]);
+  }, [socket, reciever?._id, roomId, tutor?._id, isSocketLoading]);
 
   useEffect(() => {
     scrollToBottom();
@@ -184,7 +179,7 @@ export default function TutorChatBox({
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!socket || !tutor?._id || !reciever?._id) {
+    if (!socket || isSocketLoading || !tutor?._id || !reciever?._id) {
       toast.error("Cannot send message: Missing required data");
       return;
     }
@@ -204,8 +199,66 @@ export default function TutorChatBox({
     setNewMessage("");
   };
 
+  const navigateVideoChat = () => {
+  if (isSocketLoading) {
+    console.error("Socket is still loading");
+    toast.error("Chat server is connecting, please wait");
+    return;
+  }
+
+  if (!socket || !socket.connected) {
+    console.error("Socket is null or not connected");
+    toast.error("Chat server not connected");
+    return;
+  }
+
+  if (!tutor) {
+    console.error("Cannot initiate video call: missing tutor ID found", { tutor });
+    toast.error("Cannot start call: Tutor not logged in");
+    return;
+  }
+
+  if (!reciever) {
+    console.error("Cannot initiate video call: missing receiver ID found", { reciever });
+    toast.error("Cannot start call: No recipient selected");
+    return;
+  }
+
+  const callData: OutgoingCallPayload = {
+    to: reciever._id,
+    from: tutor._id,
+    roomId,
+    callType: "video",
+    studentName: reciever.name || "Unknown Student",
+    studentImage: reciever.profilePicture || "/logos/avatar.x",
+    tutorName: tutor.name || "Unknown Tutor",
+    tutorImage: tutor.profilePicture || "/logos/avatar.x",
+  };
+
+  const videoCallPayload: VideoCallPayload = {
+    ...callData,
+    type: "out-going",
+    userID: reciever._id,
+    userName: reciever.name || "Unknown Student",
+    userImage: reciever.profilePicture || "/logos/avatar.x",
+  };
+
+  console.log("Emitting outgoing-video-call with data:", callData);
+  console.log("Setting video call and outgoing call state:", videoCallPayload);
+
+  try {
+    socket.emit("outgoing-video-call", callData);
+    dispatch(setVideoCall(videoCallPayload)); 
+    dispatch(setOutgoingCall(videoCallPayload));
+    dispatch(setShowOutgoingCall(true));
+  } catch (error) {
+    console.error("Error initiating video call:", error);
+    toast.error("Failed to initiate video call");
+  }
+};
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!socket || !tutor?._id) {
+    if (!socket || isSocketLoading || !tutor?._id) {
       toast.error("Cannot upload image: Missing required data");
       return;
     }
@@ -241,12 +294,8 @@ export default function TutorChatBox({
     setNewMessage((prev) => prev + emojiObject.emoji);
   };
 
-  const rejectIncomingCall = () => {
-    endCall();
-  };
-
   const getProfilePictureSrc = (profilePicture?: string | null): string => {
-    return profilePicture || "/logos/avatar.avif";
+    return profilePicture || "/logos/avatar.x";
   };
 
   if (isLoading) {
@@ -269,29 +318,32 @@ export default function TutorChatBox({
   }
 
   return (
-    <div className="flex flex-col w-full h-full bg-gradient-to-b from-gray-50 to-gray-100">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-4 shadow-lg flex items-center">
-        <img
-          src={getProfilePictureSrc(reciever.profilePicture)}
-          alt={reciever.name}
-          className="w-[5%] rounded-[50%]"
-        />
-        <div className="ml-3">
-          <p className="text-lg font-semibold text-white">{reciever.name || "Unknown"}</p>
-          <p className="text-sm text-green-300">{isOnline ? "Online" : "Offline"}</p>
+    <div className="flex flex-col w-full h-full bg-pink-200">
+      <div
+        className="bg-gradient-to-r p-4 shadow-lg flex items-center justify-between"
+        style={{ background: "linear-gradient(to right, #8C2C2C, #A03333)" }}
+      >
+        <div className="flex items-center">
+          <img
+            src={getProfilePictureSrc(reciever.profilePicture)}
+            alt={reciever.name}
+            className="w-[5%] rounded-[50%]"
+          />
+          <div className="ml-3">
+            <p className="text-lg font-semibold text-white">{reciever.name || "Unknown"}</p>
+            <p className="text-sm text-green-300">{isOnline ? "Online" : "Offline"}</p>
+          </div>
         </div>
-        <div className="flex flex-1 justify-end">
-          <Button
-            onClick={() => initiateCall(reciever._id)}
-            className="bg-white/20 text-white hover:bg-white/30"
-          >
-            <Video className="h-6 w-6" />
-          </Button>
-        </div>
+        <Button
+          isIconOnly
+          variant="light"
+          aria-label="Start video call"
+          onClick={navigateVideoChat}
+          className="text-white hover:bg-blue-700"
+        >
+          <Video className="h-6 w-6" />
+        </Button>
       </div>
-
-      {/* Messages */}
       <ScrollShadow hideScrollBar className="flex-1 p-6 overflow-y-auto">
         {(!Array.isArray(messages) || messages.length === 0) ? (
           <div className="flex flex-col items-center justify-center h-full text-center">
@@ -310,13 +362,17 @@ export default function TutorChatBox({
               ></path>
             </svg>
             <p className="text-gray-500 text-lg font-medium">Say Hello</p>
-            <p className="text-gray-400 text-sm">Start the conversation with {reciever.name || "this user"}!</p>
+            <p className="text-gray-400 text-sm">
+              Start the conversation with {reciever.name || "this user"}!
+            </p>
           </div>
         ) : (
           messages.map((msg) => (
             <div
               key={msg._id || `${msg.senderId}-${msg.message_time}`}
-              className={`flex mb-4 ${msg.senderId === tutor?._id ? "justify-end" : "justify-start"}`}
+              className={`flex mb-4 ${
+                msg.senderId === tutor?._id ? "justify-end" : "justify-start"
+              }`}
             >
               <div
                 className={`rounded-2xl p-4 max-w-md shadow-md transition-all duration-200 ${
@@ -371,8 +427,6 @@ export default function TutorChatBox({
         )}
         <div ref={messagesEndRef}></div>
       </ScrollShadow>
-
-      {/* Message Input */}
       <form
         onSubmit={handleSendMessage}
         className="bg-white p-4 border-t border-gray-200 flex items-center space-x-3 shadow-inner"
@@ -426,13 +480,6 @@ export default function TutorChatBox({
           <Send className="h-5 w-5" />
         </Button>
       </form>
-
-      <IncommingCallModal
-        answerCall={answerCall}
-        isCallModalVisible={isCallModalVisible}
-        reciever={reciever}
-        rejectIncomingCall={rejectIncomingCall}
-      />
     </div>
   );
 }

@@ -1,21 +1,27 @@
-import INotification from "../../interfaces/notification";
-import React, { useEffect } from "react";
-import toast from "react-hot-toast";
 
-const Notifications = ({ notificationsData }: { notificationsData: INotification }) => {
+import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
+import INotification from "../../interfaces/notification";
+
+interface NotificationsProps {
+  notificationsData: INotification[];
+}
+
+const Notifications = ({ notificationsData }: NotificationsProps) => {
+  const [seenNotifications, setSeenNotifications] = useState<string[]>([]);
+
   const requestNotificationPermission = async () => {
     if (Notification.permission === "default") {
-      await Notification.requestPermission();
+      const permission = await Notification.requestPermission();
+      console.log("Notification permission:", permission);
     }
   };
 
   const showBrowserNotification = (notification: INotification) => {
     if (Notification.permission === "granted") {
-      new Notification(notification.message, {
-        body: notification.url
-          ? `Click to open: ${notification.url}`
-          : "You have a new notification!",
-        icon: "https://via.placeholder.com/128",
+      new Notification(notification.heading || "New Notification", {
+        body: notification.url ? `Click to open: ${notification.url}` : notification.message,
+        icon: "/logos/avatar.avif",
       });
     }
   };
@@ -23,14 +29,14 @@ const Notifications = ({ notificationsData }: { notificationsData: INotification
   const showToastNotification = (notification: INotification) => {
     toast(
       (t) => (
-        <div style={{ display: "flex", flexDirection: "column" }}>
-          <p style={{ fontWeight: "bold", margin: 0 }}>{notification.message}</p>
+        <div className="flex flex-col">
+          <p className="font-semibold text-gray-800">{notification.heading || notification.message}</p>
           {notification.url && (
             <a
               href={notification.url}
               target="_blank"
               rel="noopener noreferrer"
-              style={{ color: "blue", textDecoration: "underline" }}
+              className="text-blue-600 underline text-sm"
               onClick={() => toast.dismiss(t.id)}
             >
               {notification.url}
@@ -41,16 +47,26 @@ const Notifications = ({ notificationsData }: { notificationsData: INotification
       {
         icon: "🔔",
         duration: 5000,
+        style: {
+          background: "#fff",
+          color: "#333",
+          border: "1px solid #e5e7eb",
+          boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+        },
       }
     );
   };
 
   useEffect(() => {
     requestNotificationPermission();
-
-    if (notificationsData && !notificationsData.isRead) {
-      showBrowserNotification(notificationsData);
-      showToastNotification(notificationsData);
+    if (notificationsData && notificationsData.length > 0) {
+      notificationsData.forEach((notification) => {
+        if (!notification.isRead && !seenNotifications.includes(notification._id!)) {
+          showBrowserNotification(notification);
+          showToastNotification(notification);
+          setSeenNotifications((prev) => [...prev, notification._id!]);
+        }
+      });
     }
   }, [notificationsData]);
 

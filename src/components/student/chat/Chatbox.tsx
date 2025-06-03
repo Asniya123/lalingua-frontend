@@ -1,17 +1,16 @@
 import { useEffect, useRef, useState } from "react";
-import { Paperclip, Smile, Send, Video, Check } from "lucide-react";
-import { useSelector } from "react-redux";
-import { RootState } from "../../redux/store";
-import { fetch_room_message, fetch_room } from "../../services/chatService";
+import { Paperclip, Smile, Send, Check } from "lucide-react";
+import { useDispatch, useSelector } from "react-redux";
+import { RootState, AppDispatch } from "../../../redux/store";
+import { fetch_room_message, fetch_room } from "../../../services/chatService";
 import { format, isValid } from "date-fns";
 import toast from "react-hot-toast";
 import EmojiPicker, { EmojiClickData } from "emoji-picker-react";
-import IncommingCallModal from "../videoCall/incomingCall_Modal";
-import { useSocket } from "../context/socketContext";
-import uploadToCloudinary from "../../utils/Cloudinary";
+import { useSocket } from "../../context/useSocket";
+import uploadToCloudinary from "../../../utils/Cloudinary";
 import { ScrollShadow, CardBody, Card } from "@nextui-org/react";
-import { Button } from "../UI/Button";
-import { Input } from "../UI/InputField";
+import { Button } from "../../UI/Button";
+import { Input } from "../../UI/InputField";
 
 export interface Message {
   _id?: string;
@@ -25,10 +24,7 @@ export interface Message {
 
 interface ChatProps {
   roomId: string;
-  initiateCall: (recieverId: string | undefined) => void;
-  answerCall: () => void;
-  endCall: () => void;
-  isCallModalVisible: boolean;
+  userId: string;
   tutorId?: string;
 }
 
@@ -38,15 +34,9 @@ export interface recieverData {
   profilePicture: string;
 }
 
-export default function ChatBox({
-  roomId,
-  initiateCall,
-  answerCall,
-  endCall,
-  isCallModalVisible,
-  tutorId,
-}: ChatProps) {
+export default function ChatBox({ roomId, userId, tutorId }: ChatProps) {
   const user = useSelector((state: RootState) => state.auth.student);
+  const dispatch = useDispatch<AppDispatch>();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [reciever, setReciever] = useState<recieverData | null>(null);
@@ -57,6 +47,13 @@ export default function ChatBox({
   const fileInput = useRef<HTMLInputElement>(null);
   const [isEmojiPickerVisible, setIsEmojiPickerVisible] = useState(false);
 
+  console.log("ChatBox state:", {
+    socketId: socket?.id,
+    userId: user?._id,
+    roomId,
+    tutorId,
+  });
+
   const scrollToBottom = () => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
@@ -64,6 +61,19 @@ export default function ChatBox({
   };
 
   useEffect(() => {
+    if (isLoading) {
+      console.log("Socket is loading, waiting...");
+      setIsLoading(true);
+      return;
+    }
+
+    if (!socket || !socket.connected) {
+      console.error("Socket is null or not connected");
+      setIsLoading(false);
+      toast.error("Chat server not connected");
+      return;
+    }
+
     if (!roomId || !user?._id) {
       console.error("Invalid roomId or userId:", { roomId, userId: user?._id });
       setIsLoading(false);
@@ -71,9 +81,44 @@ export default function ChatBox({
       return;
     }
 
-    if (socket) {
+    if (socket && user?._id) {
+      console.log("Registering student with socket:", user._id);
+      socket.emit("register-user", { userId: user._id, role: "user" });
+
       socket.emit("joined-room", roomId);
-      setMessages([]);
+
+      socket.off("new-message").on("new-message", (message: Message) => {
+        console.log("New message received:", message);
+        if (message.chatId === roomId) {
+          const normalizedMessage = {
+            ...message,
+            message_time: message.message_time ? new Date(message.message_time) : new Date(),
+          };
+          setMessages((prev) => [...prev, normalizedMessage]);
+          if (document.visibilityState === "visible") {
+            socket.emit("mark-messages-read", { chatId: roomId, userId: user._id });
+          }
+        }
+      });
+
+      socket.off("message-read").on("message-read", (data: { chatId: string; userId: string }) => {
+        if (data.chatId === roomId && data.userId !== user._id) {
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.senderId === user._id && !msg.isRead ? { ...msg, isRead: true } : msg
+            )
+          );
+        }
+      });
+
+      socket.off("reject-call").on("reject-call", (data: any) => {
+        console.log("Received reject-call:", data);
+        if (data.sender === "tutor") {
+          toast.error("Call rejected by tutor");
+        } else if (data.sender === "user") {
+          toast.error("Call rejected");
+        }
+      });
     }
 
     const fetchRecieverData = async () => {
@@ -162,40 +207,15 @@ export default function ChatBox({
     };
 
     fetchRecieverData();
-  }, [roomId, socket, user?._id, tutorId]);
-
-  useEffect(() => {
-    if (!socket) return;
-
-    socket.on("new-message", (message: Message) => {
-      console.log("New message received:", message);
-      if (message.chatId === roomId) {
-        const normalizedMessage = {
-          ...message,
-          message_time: message.message_time ? new Date(message.message_time) : new Date(),
-        };
-        setMessages((prev) => [...prev, normalizedMessage]);
-        if (document.visibilityState === "visible") {
-          socket.emit("mark-messages-read", { chatId: roomId, userId: user?._id });
-        }
-      }
-    });
-
-    socket.on("message-read", (data: { chatId: string; userId: string }) => {
-      if (data.chatId === roomId && data.userId !== user?._id) {
-        setMessages((prev) =>
-          prev.map((msg) =>
-            msg.senderId === user?._id && !msg.isRead ? { ...msg, isRead: true } : msg
-          )
-        );
-      }
-    });
 
     return () => {
-      socket.off("new-message");
-      socket.off("message-read");
+      if (socket) {
+        socket.off("new-message");
+        socket.off("message-read");
+        socket.off("reject-call");
+      }
     };
-  }, [socket, roomId, user?._id]);
+  }, [socket, user?._id, roomId, tutorId, dispatch, isLoading]);
 
   useEffect(() => {
     scrollToBottom();
@@ -221,12 +241,20 @@ export default function ChatBox({
     const message: Message = {
       senderId: user._id,
       message: newMessage,
-      message_time: new Date().toISOString(),
+      message_time: new Date(),
       message_type: "text",
       isRead: false,
       chatId: roomId,
     };
-    socket.emit("message", { ...message, roomId, recieverId: reciever._id });
+
+    console.log("Emitting message:", message);
+    socket.emit("message", {
+      ...message,
+      roomId,
+      recieverId: reciever._id,
+      to: reciever._id,
+    });
+
     setMessages((prev) => [...prev, message]);
     setNewMessage("");
   };
@@ -257,7 +285,14 @@ export default function ChatBox({
         chatId: roomId,
       };
 
-      socket.emit("message", { ...message, roomId, recieverId: reciever._id });
+      console.log("Emitting image message:", message);
+      socket.emit("message", {
+        ...message,
+        roomId,
+        recieverId: reciever._id,
+        to: reciever._id,
+      });
+
       setMessages((prev) => [...prev, message]);
     } catch (error) {
       console.error("Error uploading image:", error);
@@ -265,12 +300,8 @@ export default function ChatBox({
     }
   };
 
-  const handleEmojiClick = (emojiObject: EmojiClickData): void => {
-    setNewMessage((prev) => prev + emojiObject.emoji);
-  };
-
-  const rejectIncomingCall = () => {
-    endCall();
+  const handleEmojiClick = (data: EmojiClickData): void => {
+    setNewMessage((prev) => prev + data.emoji);
   };
 
   const getProfilePictureSrc = (profilePicture?: string | null): string => {
@@ -278,9 +309,7 @@ export default function ChatBox({
   };
 
   if (isLoading) {
-    return (
-      <div className="flex h-full items-center justify-center text-gray-500">Loading chat...</div>
-    );
+    return <div className="flex h-full items-center justify-center text-gray-500">Loading chat...</div>;
   }
 
   if (!reciever) {
@@ -296,28 +325,19 @@ export default function ChatBox({
 
   return (
     <div className="flex flex-col w-full h-full bg-gradient-to-b from-gray-50 to-gray-100">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-4 shadow-lg flex items-center">
-        <img
-          src={getProfilePictureSrc(reciever.profilePicture)}
-          alt={reciever.name}
-          className="w-[5%] rounded-[50%]"
-        />
-        <div className="ml-3">
-          <p className="text-lg font-semibold text-white">{reciever.name || "Unknown"}</p>
-          <p className="text-sm text-green-300">{isOnline ? "Online" : "Offline"}</p>
-        </div>
-        <div className="flex flex-1 justify-end">
-          <Button
-            onClick={() => initiateCall(reciever._id)}
-            className="bg-white/20 text-white hover:bg-white/30"
-          >
-            <Video className="h-6 w-6" />
-          </Button>
+      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-4 shadow-lg flex items-center justify-between">
+        <div className="flex items-center">
+          <img
+            src={getProfilePictureSrc(reciever.profilePicture)}
+            alt={reciever.name}
+            className="w-[5%] rounded-[50%]"
+          />
+          <div className="ml-3">
+            <p className="text-lg font-semibold text-white">{reciever.name || "Unknown"}</p>
+            <p className="text-sm text-green-300">{isOnline ? "Online" : "Offline"}</p>
+          </div>
         </div>
       </div>
-
-      {/* Messages */}
       <ScrollShadow hideScrollBar className="flex-1 p-6 overflow-y-auto">
         {(!Array.isArray(messages) || messages.length === 0) ? (
           <div className="flex flex-col items-center justify-center h-full text-center">
@@ -336,67 +356,47 @@ export default function ChatBox({
               ></path>
             </svg>
             <p className="text-gray-500 text-lg font-medium">Say Hello</p>
-            <p className="text-gray-400 text-sm">
-              Start the conversation with {reciever.name || "this tutor"}!
-            </p>
+            <p className="text-gray-400 text-sm">Start the conversation with {reciever.name || "this tutor"}!</p>
           </div>
         ) : (
           messages.map((msg) => {
             const messageTime = new Date(msg.message_time);
             if (!isValid(messageTime)) {
-              console.error("Invalid message_time:", {
-                msgId: msg._id,
-                message_time: msg.message_time,
-                senderId: msg.senderId,
-              });
+              console.error("Invalid message_time:", { msgId: msg._id, message_time: msg.message_time, senderId: msg.senderId });
               return null;
             }
-
             return (
               <div
                 key={msg._id || `${msg.senderId}-${msg.message_time}`}
-                className={`flex mb-4 ${
-                  msg.senderId === user?._id ? "justify-end" : "justify-start"
-                }`}
+                className={`flex mb-4 ${msg.senderId === user?._id ? "justify-end" : "justify-start"}`}
               >
-                
                 <div
                   className={`rounded-2xl p-4 max-w-md shadow-md transition-all duration-200 ${
-                    msg.senderId === user?._id
-                      ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white"
-                      : "bg-white text-gray-800"
+                    msg.senderId === user?._id ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white" : "bg-white text-gray-800"
                   }`}
                 >
-                  {msg.message_type === "image" && (
-                    <img
-                      src={msg.message}
-                      alt="Image"
-                      className="max-w-full h-auto rounded-lg"
-                    />
-                  )}
+                  {msg.message_type === "image" && <img src={msg.message} alt="Image" className="max-w-full h-auto rounded-lg" />}
                   {msg.message_type === "text" && <p className="text-sm">{msg.message}</p>}
                   {msg.message_type === "video-call" && (
                     <Card className="max-w-md bg-gray-800/90 backdrop-blur-sm">
                       <CardBody className="flex flex-row items-center gap-4 py-3 px-4">
                         <div className="relative">
-                          <Video className="w-5 h-5 text-white" />
+                          <Check className="w-5 h-5 text-white" />
                           <span className="absolute -right-1 -top-1 block w-2 h-2 border-2 border-gray-800 bg-green-400 rounded-full" />
                         </div>
                         <div className="flex-1">
                           <h3 className="text-white text-sm font-medium">Video call</h3>
-                          <p className="text-gray-300 text-xs">{msg.message}</p>
+                          <div className="text-gray-300 text-xs">{msg.message}</div>
                         </div>
                       </CardBody>
                     </Card>
                   )}
                   <div className="flex items-center justify-between mt-2">
-                    <span className="text-xs text-gray-300">
-                      {format(messageTime, "hh:mm a")}
-                    </span>
+                    <span className="text-xs text-gray-300">{format(messageTime, "hh:mm a")}</span>
                     {msg.senderId === user?._id && (
                       <span className="flex items-center ml-2">
                         {!isOnline ? (
-                          <Check className="h-3 w-3 text-gray-400" />
+                          <Check className="h-3 w-3 text-gray-500" />
                         ) : msg.isRead ? (
                           <>
                             <Check className="h-3 w-3 text-blue-300" />
@@ -418,8 +418,6 @@ export default function ChatBox({
         )}
         <div ref={messagesEndRef}></div>
       </ScrollShadow>
-
-      {/* Message Input */}
       <form
         onSubmit={handleSendMessage}
         className="bg-white p-4 border-t border-gray-200 flex items-center space-x-3 shadow-inner"
@@ -473,13 +471,6 @@ export default function ChatBox({
           <Send className="h-5 w-5" />
         </Button>
       </form>
-
-      <IncommingCallModal
-        answerCall={answerCall}
-        isCallModalVisible={isCallModalVisible}
-        reciever={reciever}
-        rejectIncomingCall={rejectIncomingCall}
-      />
     </div>
   );
 }

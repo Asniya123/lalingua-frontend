@@ -122,7 +122,7 @@ const EnrolledCourses: React.FC = () => {
       return;
     }
     console.log(`Initiating chat with tutor: ${tutorName} (${tutorId})`);
-    navigate(`/chat?tutorId=${encodeURIComponent(tutorId)}`);
+     navigate(`/chat?tutorId=${encodeURIComponent(tutorId)}`);
   };
 
   const isCancelEligible = (enrolledDate: string | undefined): boolean => {

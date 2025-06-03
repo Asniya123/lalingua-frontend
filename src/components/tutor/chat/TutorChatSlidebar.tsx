@@ -1,14 +1,14 @@
 import { Avatar, Badge, ScrollShadow } from "@nextui-org/react";
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
-import SearchInput from "../UI/SearchInput";
-import { fetch_tutor_room } from "../../services/tutorChatService";
+import SearchInput from "../../UI/SearchInput";
+import { fetch_tutor_room } from "../../../services/tutorChatService";
 import { useSelector } from "react-redux";
-import { RootState } from "../../redux/store";
-import { useSocket } from "../context/socketContext";
-import { Message } from "../../interfaces/chat";
+import { RootState } from "../../../redux/store";
+import { useSocket } from "../../context/useSocket";
+import { Message } from "../../../interfaces/chat";
 import toast from "react-hot-toast";
 import { Check } from "lucide-react";
-import { Contact } from "../../Pages/Tutor/ChatPage";
+import { Contact } from "../../../Pages/Tutor/ChatPage";
 
 interface ChatSidebarProps {
   onSelectRoom: (roomId: string) => void;
@@ -190,8 +190,8 @@ export default function TutorChatSidebar({ onSelectRoom, chats, setChats, setSea
   };
 
   return (
-    <div className="w-80 bg-white shadow-xl flex flex-col">
-      <div className="p-4 bg-gradient-to-r from-blue-600 to-indigo-600">
+    <div className="w-80 bg-[#D0A9A9] shadow-xl flex flex-col">
+      <div className="bg-gradient-to-r p-4 shadow-lg flex items-center justify-between" style={{background: 'linear-gradient(to right, #8C2C2C, #A03333)'}}>
         <SearchInput
           onSearch={setSearchTerm}
           className="bg-white/90 backdrop-blur-sm rounded-full shadow-sm"

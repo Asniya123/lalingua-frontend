@@ -4,9 +4,9 @@ import { useSelector } from "react-redux";
 import { RootState } from "../../redux/store";
 import toast from "react-hot-toast";
 import { fetch_tutor_chats, fetch_tutor_room } from "../../services/tutorChatService";
-import { useSocket } from "../../components/context/socketContext";
-import TutorChatBox from "../../components/chat/TutorChatbox";
-import TutorChatSidebar from "../../components/chat/TutorChatSlidebar";
+import { useSocket } from "../../components/context/useSocket";
+import TutorChatBox from "../../components/tutor/chat/TutorChatbox";
+import TutorChatSidebar from "../../components/tutor/chat/TutorChatSlidebar";
 
 export interface Contact {
   _id: string;
@@ -29,7 +29,6 @@ export default function TutorChatPage() {
   const [selectedUserId, setSelectedUserId] = useState<string | undefined>(undefined);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [chats, setChats] = useState<Contact[]>([]);
-  const [isCallModalVisible, setIsCallModalVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchRoomData = async (receiverId: string) => {
@@ -74,6 +73,7 @@ export default function TutorChatPage() {
         const updatedChats = chatsResponse.users.map((chat: any) => ({
           ...chat,
           isOnline: onlineUsers?.includes(chat._id) || false,
+          lastMessage: chat.lastMessage?.message || null,
           lastMessageRead: chat.lastMessage ? chat.unReadCount === 0 : true,
         }));
         setChats(updatedChats);
@@ -122,28 +122,15 @@ export default function TutorChatPage() {
     }
   };
 
-  const initiateCall = (receiverId: string | undefined) => {
-    if (receiverId) {
-      setIsCallModalVisible(true);
-      toast.success(`Initiating call to ${receiverId}`);
-    }
-  };
-
-  const answerCall = () => {
-    setIsCallModalVisible(false);
-    toast.success("Call answered");
-  };
-
-  const endCall = () => {
-    setIsCallModalVisible(false);
-    toast.success("Call ended");
-  };
-
   return (
     <div className="flex h-screen">
       {isLoading ? (
         <div className="flex h-full items-center justify-center text-gray-500">
           Loading chats...
+        </div>
+      ) : !tutor?._id ? (
+        <div className="flex h-full items-center justify-center text-gray-500">
+          Please log in to access chat
         </div>
       ) : (
         <>
@@ -157,11 +144,8 @@ export default function TutorChatPage() {
             {selectedRoomId ? (
               <TutorChatBox
                 roomId={selectedRoomId}
-                initiateCall={initiateCall}
-                answerCall={answerCall}
-                endCall={endCall}
-                isCallModalVisible={isCallModalVisible}
                 userId={selectedUserId}
+                tutorId={tutor._id}
               />
             ) : (
               <div className="flex h-full items-center justify-center text-gray-500">

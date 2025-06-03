@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router";
+import { Routes, Route } from "react-router-dom";
 import Signup from "../../Pages/Tutor/signup";
 import Login from "../../Pages/Tutor/Login";
 import TutorDashboard from "../../Pages/Tutor/home";

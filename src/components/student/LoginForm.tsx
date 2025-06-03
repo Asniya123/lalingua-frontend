@@ -5,8 +5,9 @@ import Cookies from 'js-cookie';
 import { useGoogleLogin } from '@react-oauth/google';
 import axios from 'axios';
 import { useDispatch } from 'react-redux';
-import { setStudent } from '../../redux/slice/studentSlice';
+import { login, setStudent } from '../../redux/slice/studentSlice';
 import { Toaster, toast } from 'react-hot-toast';
+import { AppDispatch } from '../../redux/store';
 
 interface LoginUser {
   email?: string;
@@ -15,7 +16,8 @@ interface LoginUser {
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
-  const dispatch = useDispatch();
+const dispatch = useDispatch<AppDispatch>();
+
 
   const [formData, setFormData] = useState<LoginUser>({ email: '', password: '' });
   const [error, setError] = useState<string | null>(null);
@@ -32,35 +34,27 @@ const Login: React.FC = () => {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-  
-    const { email, password } = formData;
-  
-    if (!email || !password) {
-      setError("Both fields are required.");
-      toast.error("Both fields are required.");
-      return;
-    }
-  
-    try {
-      const response = await loginUser(email, password);
-      Cookies.set("userToken", response.login.accessToken);
-      dispatch(setStudent(response.login.student));
-      toast.success("Logged in successfully!");
-      navigate("/");
-    } catch (err: any) {
-      const errorMessage = err.message || "Login failed. Please try again.";
-      
-      if (errorMessage === "Your account has been blocked. Contact support.") {
-        setError(errorMessage);
-        toast.error(errorMessage);
-      } else {
-        setError(errorMessage);
-        toast.error(errorMessage);
-      }
-    }
-  };
+  e.preventDefault();
+  setError(null);
+
+  const { email, password } = formData;
+
+  if (!email || !password) {
+    setError("Both fields are required.");
+    toast.error("Both fields are required.");
+    return;
+  }
+
+  try {
+    await dispatch(login({ email, password })).unwrap();
+    toast.success("Logged in successfully!");
+    navigate("/"); 
+  } catch (err: any) {
+    const errorMessage = err || "Login failed. Please try again.";
+    setError(errorMessage);
+    toast.error(errorMessage);
+  }
+};
 
   const handleGoogleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {

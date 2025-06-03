@@ -1,14 +1,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import ChatBox from "../../components/chat/Chatbox";
+import ChatBox from "../../components/student/chat/Chatbox";
 import { useSelector } from "react-redux";
 import { RootState } from "../../redux/store";
-import ChatSidebar from "../../components/chat/ChatSlidebar";
+import ChatSidebar from "../../components/student/chat/ChatSlidebar";
 import toast from "react-hot-toast";
 import { fetch_chats, fetch_room } from "../../services/chatService";
-import { useSocket } from "../../components/context/socketContext";
+import { useSocket } from "../../components/context/useSocket";
 import { Message } from "../../interfaces/chat";
-
 
 export interface Contact {
   _id: string;
@@ -30,8 +29,6 @@ export default function ChatPage() {
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
   const [selectedTutorId, setSelectedTutorId] = useState<string | undefined>(undefined);
   const [searchTerm, setSearchTerm] = useState<string>("");
-  const [chats, setChats] = useState<Contact[]>([]);
-  const [isCallModalVisible, setIsCallModalVisible] = useState(false);
 
   const fetchRoomData = async (receiverId: string) => {
     if (!receiverId || !user?._id) {
@@ -47,7 +44,7 @@ export default function ChatPage() {
       if (response.success && response.room?._id) {
         setSelectedRoomId(response.room._id);
         setSelectedTutorId(receiverId);
-        navigate(`/chat?tutorId=${encodeURIComponent(receiverId)}`);
+        navigate(`/chat/${encodeURIComponent(response.room._id)}`);
       } else {
         console.error("Invalid room response:", response);
         toast.error(response.message || "Failed to load chat room");
@@ -90,6 +87,8 @@ export default function ChatPage() {
     }
   };
 
+  const [chats, setChats] = useState<Contact[]>([]);
+
   useEffect(() => {
     fetchData();
   }, [searchTerm, user, onlineUsers]);
@@ -108,56 +107,38 @@ export default function ChatPage() {
 
   const handleSelectRoom = (newRoomId: string) => {
     setSelectedRoomId(newRoomId);
-    const selectedChat = chats.find((chat) => chat.chatId === newRoomId);
-    if (selectedChat) {
-      setSelectedTutorId(selectedChat._id);
-      navigate(`/chat?tutorId=${encodeURIComponent(selectedChat._id)}`);
-    }
+    navigate(`/chat/${encodeURIComponent(newRoomId)}`);
   };
 
-  const initiateCall = (receiverId: string | undefined) => {
-    if (receiverId) {
-      setIsCallModalVisible(true);
-      toast.success(`Initiating call to ${receiverId}`);
-    }
-  };
-
-  const answerCall = () => {
-    setIsCallModalVisible(false);
-    toast.success("Call answered");
-  };
-
-  const endCall = () => {
-    setIsCallModalVisible(false);
-    toast.success("Call ended");
-  };
+  if (!user?._id) {
+    return (
+      <div className="flex h-screen items-center justify-center text-gray-500">
+        Please log in to access chat
+      </div>
+    );
+  }
 
   return (
- 
-      <div className="flex h-screen">
-        <ChatSidebar
-          onSelectRoom={handleSelectRoom}
-          chats={chats}
-          setChats={setChats}
-          setSearchTerm={setSearchTerm}
-        />
-        <div className="flex-1">
-          {selectedRoomId ? (
-            <ChatBox
-              roomId={selectedRoomId}
-              initiateCall={initiateCall}
-              answerCall={answerCall}
-              endCall={endCall}
-              isCallModalVisible={isCallModalVisible}
-              tutorId={selectedTutorId}
-            />
-          ) : (
-            <div className="flex h-full items-center justify-center text-gray-500">
-              Select a chat to start messaging
-            </div>
-          )}
-        </div>
+    <div className="flex h-screen">
+      <ChatSidebar
+        onSelectRoom={handleSelectRoom}
+        chats={chats}
+        setChats={setChats}
+        setSearchTerm={setSearchTerm}
+      />
+      <div className="flex-1">
+        {selectedRoomId ? (
+          <ChatBox
+            roomId={selectedRoomId}
+            userId={user._id}
+            tutorId={selectedTutorId}
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center text-gray-500">
+            Select a chat to start messaging
+          </div>
+        )}
       </div>
-   
+    </div>
   );
 }

@@ -1,4 +1,4 @@
-import { Routes, Route, Outlet } from "react-router";
+import { Routes, Route } from "react-router-dom";
 import Signup from "../../Pages/User/Signup";
 import Login from "../../Pages/User/Login";
 import Home from "../../Pages/User/home";
@@ -14,17 +14,14 @@ import EnrollmentCourses from "../../Pages/User/Course/EnrollmentCourses";
 import PathProtect from "../../components/Protector/UserProtector/PathProtect";
 import Lessons from "../../components/student/Course/Lesson";
 import TutorLists from "../../Pages/User/TutorLists";
-import RequireLanguage from "../../components/student/RequireLanguage"; 
+import RequireLanguage from "../../components/student/RequireLanguage";
 import TutorDetails from "../../Pages/User/TutorDetails";
-import ChatBox from "../../components/chat/Chatbox";
 import Wallets from "../../Pages/User/wallets";
 import ChatPage from "../../Pages/User/Chat";
 
-
-function StudentRoute() {
+const StudentRoute = () => {
   return (
     <Routes>
-      {/* Public Routes */}
       <Route path="/" element={<Layouts />}>
         <Route index element={<Home />} />
       </Route>
@@ -32,22 +29,14 @@ function StudentRoute() {
       <Route path="/register" element={<Signup />} />
       <Route path="/login" element={<Login />} />
 
-      {/* Protected Routes */}
       <Route element={<ProtectedRoute />}>
         <Route element={<Layouts />}>
-         
           <Route path="/getProfile" element={<StudentProfile />} />
           <Route path="/editProfile" element={<EditProfile />} />
           <Route path="/languages" element={<LanguageSelectors />} />
           <Route path="/learning" element={<ChooseLearning />} />
 
-          <Route
-            element={
-              <RequireLanguage>
-                <Outlet />
-              </RequireLanguage>
-            }
-          >
+          <Route element={<RequireLanguage />}>
             <Route path="/course" element={<Courses />} />
             <Route path="/courseDetail/:id" element={<CourseDetail />} />
             <Route path="/enrolled-Courses" element={<EnrollmentCourses />} />
@@ -55,13 +44,12 @@ function StudentRoute() {
             <Route path="/tutors" element={<TutorLists />} />
             <Route path="/tutorDetail/:id" element={<TutorDetails />} />
             <Route path="/wallet" element={<Wallets />} />
-            <Route path="/chat" element={<ChatPage />} />
-            
+            <Route path="/chat/:roomId?" element={<ChatPage />} />
           </Route>
         </Route>
       </Route>
     </Routes>
   );
-}
+};
 
 export default StudentRoute;

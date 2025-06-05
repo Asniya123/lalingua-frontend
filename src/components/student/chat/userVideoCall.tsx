@@ -21,6 +21,13 @@ function UserVideoCall() {
   const dispatch = useDispatch<AppDispatch>();
 
   useEffect(() => {
+    console.log("UserVideoCall useEffect triggered:", {
+      roomIdUser,
+      studentId: student?._id,
+      isInitialized,
+      isDestroying,
+    });
+
     if (!roomIdUser || !student?._id || isDestroying) {
       console.error("Missing roomIdUser or student ID", { roomIdUser, studentId: student?._id });
       toast.error("Cannot start video call: Invalid data");
@@ -28,16 +35,14 @@ function UserVideoCall() {
       return;
     }
 
-    // Prevent multiple initializations
     if (isInitialized || zpRef.current) {
       console.log("ZegoUIKit already initialized, skipping...");
       return;
     }
 
-     const appId = parseInt(import.meta.env.VITE_ZEGO_APP_ID)
+    const appId = parseInt(import.meta.env.VITE_ZEGO_APP_ID);
     const serverSecret = import.meta.env.VITE_ZEGO_SERVER_SECRET;
 
-    // Add a small delay to ensure DOM is ready and prevent race conditions
     const initTimer = setTimeout(() => {
       if (isDestroying || zpRef.current) return;
 
@@ -50,13 +55,12 @@ function UserVideoCall() {
           student.name || "Student"
         );
 
-        // Wait for container to be ready
         if (!videoCallRef.current) {
           console.error("Video call container not ready");
           return;
         }
 
-        console.log("Creating ZegoUIKit instance...");
+        console.log("Creating ZegoUIKit instance for student...");
         zpRef.current = ZegoUIKitPrebuilt.create(kitToken);
 
         if (!zpRef.current) {
@@ -64,7 +68,7 @@ function UserVideoCall() {
           return;
         }
 
-        console.log("Joining room...");
+        console.log("Joining room:", roomIdUser);
         zpRef.current.joinRoom({
           container: videoCallRef.current,
           scenario: {
@@ -80,7 +84,6 @@ function UserVideoCall() {
           onUserLeave: (users) => {
             console.log("Tutor left the room:", users);
             toast("Tutor left the call");
-            // Add delay to prevent race condition
             setTimeout(() => {
               if (!isDestroying) {
                 endCall();
@@ -89,7 +92,6 @@ function UserVideoCall() {
           },
           onLeaveRoom: () => {
             console.log("Student left the room");
-            // Add delay to prevent race condition
             setTimeout(() => {
               if (!isDestroying) {
                 endCall();
@@ -99,17 +101,13 @@ function UserVideoCall() {
         });
 
         setIsInitialized(true);
-        console.log("ZegoUIKit initialized successfully");
+        console.log("ZegoUIKit initialized successfully for student");
       } catch (error) {
         console.error("Failed to initialize ZegoUIKit:", error);
         toast.error("Failed to start video call");
         dispatch(setShowVideoCallUser(false));
       }
     }, 100);
-
-    return () => {
-      clearTimeout(initTimer);
-    };
 
     const handleUserLeft = () => {
       console.log("Tutor left the call");
@@ -125,10 +123,10 @@ function UserVideoCall() {
 
     return () => {
       console.log("Cleaning up UserVideoCall");
+      clearTimeout(initTimer);
       setIsDestroying(true);
       socket?.off("user-left", handleUserLeft);
-      
-      // Safe cleanup with error handling
+
       if (zpRef.current) {
         try {
           console.log("Attempting to hang up...");
@@ -136,7 +134,7 @@ function UserVideoCall() {
         } catch (error) {
           console.warn("Error during hangUp:", error);
         }
-        
+
         setTimeout(() => {
           try {
             if (zpRef.current) {
@@ -148,32 +146,32 @@ function UserVideoCall() {
             console.warn("Error during destroy:", error);
           }
           setIsInitialized(false);
+          setIsDestroying(false);
         }, 500);
       } else {
         setIsInitialized(false);
+        setIsDestroying(false);
       }
     };
-  }, []); // Empty dependency array to prevent re-initialization
+  }, [roomIdUser, student, socket, dispatch, isDestroying]);
 
   const endCall = async () => {
     if (isDestroying) return;
-    
+
     setIsDestroying(true);
-    
+
     try {
-      // Emit socket event first
       if (socket && showIncomingVideoCall?.tutorId) {
         socket.emit("leave-room", { to: showIncomingVideoCall.tutorId, from: student?._id });
       }
 
-      // Clean up ZegoUIKit
       if (zpRef.current) {
         try {
           await zpRef.current.hangUp();
         } catch (error) {
           console.warn("Error during hangUp in endCall:", error);
         }
-        
+
         setTimeout(() => {
           try {
             if (zpRef.current) {
@@ -186,7 +184,6 @@ function UserVideoCall() {
         }, 300);
       }
 
-      // Update Redux state
       dispatch(setShowVideoCallUser(false));
       dispatch(setRoomIdUser(null));
       dispatch(setVideoCallUser(null));
@@ -194,6 +191,8 @@ function UserVideoCall() {
       setIsInitialized(false);
     } catch (error) {
       console.error("Error in endCall:", error);
+    } finally {
+      setIsDestroying(false);
     }
   };
 

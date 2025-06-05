@@ -2,7 +2,12 @@ import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "../../../redux/store";
 import { useSocket } from "../../context/useSocket";
 import { useEffect, useRef } from "react";
-import { endCallTutor, setShowOutgoingCall } from "../../../redux/slice/tutorSlice";
+import { 
+  endCallTutor, 
+  setShowOutgoingCall, 
+  setRoomId, 
+  setShowVideoCall 
+} from "../../../redux/slice/tutorSlice";
 import { CallEnd } from "@mui/icons-material";
 import toast from "react-hot-toast";
 
@@ -53,13 +58,30 @@ function OutgoingVideoCall() {
       handleEndCall();
     }, 60000);
 
-    // Handle call rejection from student
+    const handleCallAcceptance = (data: any) => {
+      console.log("Tutor received call acceptance:", data);
+      
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+
+      // Delay state updates to prevent race conditions
+      setTimeout(() => {
+        dispatch(setShowOutgoingCall(false));
+        dispatch(setRoomId(data.roomId));
+        dispatch(setShowVideoCall(true));
+        toast.success("Call accepted! Joining video call...");
+      }, 100);
+    };
+
     const handleCallRejection = (data: any) => {
       console.log("Call rejected:", data);
       toast.error(data.message || "Call was rejected or user is offline");
       handleEndCall();
     };
 
+    socket.on("tutor-call-accept", handleCallAcceptance);
     socket.on("reject-call", handleCallRejection);
 
     return () => {
@@ -68,6 +90,7 @@ function OutgoingVideoCall() {
         clearTimeout(timeoutRef.current);
         timeoutRef.current = null;
       }
+      socket.off("tutor-call-accept", handleCallAcceptance);
       socket.off("reject-call", handleCallRejection);
     };
   }, [videoCall, socket, tutor, dispatch, isSocketLoading]);

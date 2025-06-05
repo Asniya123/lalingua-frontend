@@ -41,16 +41,16 @@ function IncomingVideoCall() {
 
     console.log("Emitting reject-call:", {
       to: showIncomingVideoCall.tutorId,
-      sender: "student", // Changed from "user" to "student"
+      sender: "student",
       name: showIncomingVideoCall.tutorName,
-      from: student?._id, // Added from field
+      from: student?._id,
     });
 
     socket.emit("reject-call", {
       to: showIncomingVideoCall.tutorId,
-      sender: "student", // Changed from "user" to "student"
+      sender: "student",
       name: showIncomingVideoCall.tutorName,
-      from: student?._id, // Added from field for better tracking
+      from: student?._id,
     });
 
     dispatch(endCallUser());
@@ -68,12 +68,12 @@ function IncomingVideoCall() {
 
     const acceptData = {
       roomId: showIncomingVideoCall.roomId,
-      from: student._id, // Student ID
-      to: showIncomingVideoCall.tutorId, // Tutor ID
+      from: student._id,
+      to: showIncomingVideoCall.tutorId,
     };
 
-    console.log("Emitting accepted-call:", acceptData);
-    socket.emit("accepted-call", acceptData);
+    console.log("Emitting accept-incoming-call:", acceptData);
+    socket.emit("accept-incoming-call", acceptData);
 
     dispatch(setRoomIdUser(showIncomingVideoCall.roomId));
     dispatch(setShowVideoCallUser(true));

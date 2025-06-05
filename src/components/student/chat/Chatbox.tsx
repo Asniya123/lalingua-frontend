@@ -61,12 +61,6 @@ export default function ChatBox({ roomId, userId, tutorId }: ChatProps) {
   };
 
   useEffect(() => {
-    if (isLoading) {
-      console.log("Socket is loading, waiting...");
-      setIsLoading(true);
-      return;
-    }
-
     if (!socket || !socket.connected) {
       console.error("Socket is null or not connected");
       setIsLoading(false);
@@ -125,11 +119,15 @@ export default function ChatBox({ roomId, userId, tutorId }: ChatProps) {
       try {
         setIsLoading(true);
         console.log("Fetching room messages for:", { roomId, userId: user._id });
-        const recieverUser = await fetch_room_message(roomId, user._id);
+
+        // First attempt to fetch room messages with the provided roomId
+        let recieverUser = await fetch_room_message(roomId, user._id);
+        console.log("fetch_room_message response:", recieverUser);
 
         if (recieverUser.success && recieverUser.room) {
           const roomData = recieverUser.room;
           console.log("Room data from fetch_room_message:", roomData);
+
           if (!Array.isArray(roomData.participants) || roomData.participants.length < 2) {
             throw new Error("Invalid room data: missing or insufficient participants");
           }
@@ -155,18 +153,22 @@ export default function ChatBox({ roomId, userId, tutorId }: ChatProps) {
                 }))
               : []
           );
+
           if (socket) {
             socket.emit("mark-messages-read", { chatId: roomId, userId: user._id });
           }
         } else if (tutorId) {
+          // Fallback: Create or fetch a room using tutorId
           console.log("Falling back to fetch_room with tutorId:", tutorId);
           const roomResponse = await fetch_room(tutorId, user._id);
           console.log("fetch_room response:", roomResponse);
+
           if (roomResponse.success && roomResponse.room) {
             const roomData = roomResponse.room;
             if (!Array.isArray(roomData.participants) || roomData.participants.length < 2) {
               throw new Error("Invalid room data in fallback: missing or invalid participants");
             }
+
             const tutor = roomData.participants.find(
               (u: { _id: string }) => u._id !== user._id
             );
@@ -215,7 +217,7 @@ export default function ChatBox({ roomId, userId, tutorId }: ChatProps) {
         socket.off("reject-call");
       }
     };
-  }, [socket, user?._id, roomId, tutorId, dispatch, isLoading]);
+  }, [socket, user?._id, roomId, tutorId, dispatch]); // Removed isLoading from dependencies
 
   useEffect(() => {
     scrollToBottom();

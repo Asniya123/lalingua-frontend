@@ -1,80 +1,93 @@
-import { useParams } from "react-router-dom";
-import { ZegoUIKitPrebuilt } from "@zegocloud/zego-uikit-prebuilt";
-import { useRef, useEffect, useState } from "react";
-import toast from "react-hot-toast";
+import { useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { RootState } from "../../../redux/store";
+import { RootState, AppDispatch } from "../../../redux/store";
 import { useSocket } from "../../context/useSocket";
+import { ZegoUIKitPrebuilt } from "@zegocloud/zego-uikit-prebuilt";
 import { setRoomId, setShowVideoCall, setVideoCall } from "../../../redux/slice/tutorSlice";
+import toast from "react-hot-toast";
 
 const TutorVideoCall = () => {
   const { roomIdTutor, videoCall } = useSelector((state: RootState) => state.tutor);
   const meetingRef = useRef<HTMLDivElement | null>(null);
+  const dispatch = useDispatch<AppDispatch>();
+  const { socket } = useSocket();
 
-  const dispatch = useDispatch()
-  let { socket } = useSocket()
   useEffect(() => {
-    if(!roomIdTutor) return
+    if (!roomIdTutor || !videoCall) {
+      console.log("No roomIdTutor or videoCall, skipping initialization");
+      return;
+    }
 
-    const appId = 630691153;
-    const serverSecret = '9e3c10e2ca2444f75e43cf1b640f8af3'
-  
+    const appId = parseInt(import.meta.env.VITE_ZEGO_APP_ID);
+    const serverSecret = import.meta.env.VITE_ZEGO_SERVER_SECRET;
 
-  const kitToken = ZegoUIKitPrebuilt.generateKitTokenForTest(
-    appId,
-    serverSecret,
-    roomIdTutor.toString(),
-    Date.now().toString(),
-    'Tutor'
-  )
+    if (!appId || !serverSecret) {
+      console.error("Zego app ID or server secret is missing");
+      toast.error("Failed to initialize video call: Configuration error");
+      return;
+    }
 
-  const zp = ZegoUIKitPrebuilt.create(kitToken)
+    if (!meetingRef.current) {
+      console.error("Meeting container not ready");
+      toast.error("Video call container not found");
+      return;
+    }
 
-  zp.joinRoom({
-    container: meetingRef.current, scenario: {
-      mode: ZegoUIKitPrebuilt.OneONoneCall,
-    },
-    turnOnMicrophoneWhenJoining: true,
-    turnOnCameraWhenJoining: true,
-    showPreJoinView: false,
-    onUserJoin:(users) => {
-      users.forEach((user) => {
-        console.log('User joined the room:', user)
-      })
-    },
-    onLeaveRoom: () => {
-      console.log('Leave Room.......')
+    const kitToken = ZegoUIKitPrebuilt.generateKitTokenForTest(
+      appId,
+      serverSecret,
+      roomIdTutor.toString(),
+      Date.now().toString(),
+      "Tutor"
+    );
 
-      if(socket){
-        socket.emit('leave-room', { to: videoCall?. userID})
-      }
+    const zp = ZegoUIKitPrebuilt.create(kitToken);
+    zp.joinRoom({
+      container: meetingRef.current,
+      scenario: {
+        mode: ZegoUIKitPrebuilt.OneONoneCall,
+      },
+      turnOnMicrophoneWhenJoining: true,
+      turnOnCameraWhenJoining: true,
+      showPreJoinView: false,
+      onUserJoin: (users) => {
+        console.log("User joined the room:", users);
+        toast.success("Student joined the call");
+      },
+      onLeaveRoom: () => {
+        console.log("Leaving room...");
+        if (socket) {
+          socket.emit("leave-room", { to: videoCall.userID });
+        }
+        // Note: Removed setPrescription as it's not defined in the slice
+        dispatch(setShowVideoCall(false));
+        dispatch(setRoomId(null));
+        dispatch(setVideoCall(null));
+      },
+    });
 
-      dispatch(setShowVideoCall(false))
-      dispatch(setRoomId(null))
-      dispatch(setVideoCall(null))
-    },
-  })
+    const handleUserLeft = () => {
+      console.log("User left the room.");
+      zp.destroy();
+      dispatch(setShowVideoCall(false));
+      dispatch(setRoomId(null));
+      dispatch(setVideoCall(null));
+    };
 
-  socket?.on('user-left', () => {
-    console.log('User left  the room')
-    zp.destroy()
-    dispatch(setShowVideoCall(false))
-    dispatch(setRoomId(null))
-    dispatch(setVideoCall(null))
-  })
+    socket?.on("user-left", handleUserLeft);
 
-  return () => {
-    zp.destroy()
-    socket?.off('user-left')
-  }
-}, [roomIdTutor, dispatch, socket])
+    return () => {
+      console.log("Cleaning up Zego instance and socket listeners");
+      zp.destroy();
+      socket?.off("user-left", handleUserLeft);
+    };
+  }, [roomIdTutor, videoCall, socket, dispatch]);
 
   return (
-        <div
-          className="w-screen bg-black h-screen absolute z-[100]"
-          ref={meetingRef}
-        />
-      );
+    <div className="w-screen h-screen bg-black absolute z-[100]">
+      <div ref={meetingRef} className="w-full h-full" />
+    </div>
+  );
 };
 
 export default TutorVideoCall;

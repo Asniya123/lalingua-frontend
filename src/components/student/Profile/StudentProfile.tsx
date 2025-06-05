@@ -4,7 +4,7 @@ import type { AppDispatch } from '../../../redux/store.js';
 import { fetchStudentProfile, uploadProfilePicture } from '../../../redux/slice/studentSlice.js';
 import { RootState } from '../../../redux/store.js';
 import Cookies from 'js-cookie';
-import { useNavigate } from 'react-router';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { changePassword } from '../../../services/userAuth.js';
 

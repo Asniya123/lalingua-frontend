@@ -1,6 +1,6 @@
 import axios, { AxiosError } from "axios";
 import Cookies from "js-cookie";
-import Student, { ICourse, IEnrolledCourse, ILesson} from "../interfaces/user.js";
+import Student, { ICourse, IEnrolledCourse, ILesson, IReview} from "../interfaces/user.js";
 import API from "../api/axiosInstance.js";
 import { Icategory, ILanguage } from "../interfaces/admin.js";
 import { Wallet } from "../interfaces/wallet.js";
@@ -414,4 +414,40 @@ export const wallet_payment = async (data: { userId: string|undefined; amount: n
 
 
 
+//Review & Rating
 
+export const submitCourseReview = async (
+  userId: string,
+  courseId: string,
+  rating: number,
+  review: string
+) => {
+  try {
+    const response = await API.post(`/course-review`, {
+      userId,
+      courseId,
+      rating,
+      review,
+    });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export async function listReviews(courseId: string): Promise<{ success: boolean; message: string; reviews: { [lessonId: string]: IReview[] } }> {
+  try {
+    const response = await API.get(`/listReviews/${courseId}`, {
+      headers: { "Content-Type": "application/json" },
+    });
+    return {
+      success: true,
+      message: "Reviews retrieved successfully",
+      reviews: response.data.reviews || {},
+    };
+  } catch (error) {
+    const axiosError = error as AxiosError<{ message?: string }>;
+    console.error("Error listing reviews:", axiosError.response?.data || axiosError.message);
+    throw new Error(axiosError.response?.data?.message || "Failed to list reviews");
+  }
+}

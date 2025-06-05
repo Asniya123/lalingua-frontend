@@ -100,3 +100,12 @@ export interface IEnrolledCourse extends ICourse {
   enrolledDate?: string;
   status: "Active" | "Cancelled" | "Expired";
 }
+
+
+export interface IReview{
+  _id?: string;
+  userId?: string;
+  rating: number;
+  comment: string;
+  createdAt: string;
+}

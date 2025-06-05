@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../../../redux/store.js';
 import { fetchTutorProfile, uploadProfilePicture, updateTutorProfile } from '../../../redux/slice/tutorSlice.js';
 import Cookies from 'js-cookie';
-import { useNavigate } from 'react-router';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { changePassword, listCourses } from '../../../services/tutorAuth.js';
 import { listLanguage } from '../../../services/adminAuth.js';

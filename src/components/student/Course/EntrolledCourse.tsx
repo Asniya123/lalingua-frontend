@@ -5,7 +5,7 @@ import { RootState } from "../../../redux/store";
 import { Card, CardContent, CardHeader } from "../../UI/card";
 import { Button } from "../../UI/Button";
 import { ICourse } from "../../../interfaces/user";
-import { getEnrolledCourses, cancelEnrollment } from "../../../services/userAuth";
+import { getEnrolledCourses, cancelEnrollment, submitCourseReview } from "../../../services/userAuth";
 import { toast } from "react-toastify";
 import { format, differenceInDays } from "date-fns";
 
@@ -22,7 +22,9 @@ interface Tutor {
 export interface IEnrolledCourse extends ICourse {
   pricePaid: number;
   enrolledDate?: string;
-  status: "Active" | "Cancelled" | "Expired";
+  status: "Active" | "Cancelled" | "Expired" | "Completed";
+  rating?: number;
+  review?: string;
 }
 
 const EnrolledCourses: React.FC = () => {
@@ -31,6 +33,9 @@ const EnrolledCourses: React.FC = () => {
   const [enrolledCourses, setEnrolledCourses] = useState<IEnrolledCourse[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [showReviewModal, setShowReviewModal] = useState<string | null>(null);
+  const [rating, setRating] = useState<number>(0);
+  const [reviewText, setReviewText] = useState<string>("");
 
   useEffect(() => {
     if (!user || !user._id) {
@@ -54,6 +59,8 @@ const EnrolledCourses: React.FC = () => {
         response.courses.forEach((course, index) => {
           console.log(`Course ${index + 1} tutor:`, course.tutor);
           console.log(`Course ${index + 1} tutorId:`, course.tutor?._id);
+          console.log(`Course ${index + 1} enrolledDate:`, course.enrolledDate);
+          console.log(`Course ${index + 1} status:`, course.status);
         });
         setEnrolledCourses(response.courses);
         if (response.courses.length === 0) {
@@ -103,7 +110,7 @@ const EnrolledCourses: React.FC = () => {
       const errorMessage = err.response?.data?.message || "Failed to cancel enrollment";
       const friendlyMessage =
         errorMessage.includes("Refund period has expired")
-          ? "Sorry, the refund period for this course has expired (7 days)."
+          ? "Sorry, the refund period for this course has expired (2 days)."
           : errorMessage.includes("Enrollment not found")
             ? "This course is not enrolled."
             : errorMessage.includes("Student not found")
@@ -122,15 +129,62 @@ const EnrolledCourses: React.FC = () => {
       return;
     }
     console.log(`Initiating chat with tutor: ${tutorName} (${tutorId})`);
-     navigate(`/chat?tutorId=${encodeURIComponent(tutorId)}`);
+    navigate(`/chat?tutorId=${encodeURIComponent(tutorId)}`);
   };
 
   const isCancelEligible = (enrolledDate: string | undefined): boolean => {
-    if (!enrolledDate) return false;
-    const enrolledAt = new Date(enrolledDate);
-    if (isNaN(enrolledAt.getTime())) return false;
-    const daysSinceEnrollment = differenceInDays(new Date(), enrolledAt);
-    return daysSinceEnrollment <= 7;
+    if (!enrolledDate) {
+      console.warn("enrolledDate is undefined or null");
+      return false;
+    }
+    try {
+      const enrolledAt = new Date(enrolledDate);
+      if (isNaN(enrolledAt.getTime())) {
+        console.warn("Invalid enrolledDate format:", enrolledDate);
+        return false;
+      }
+      const daysSinceEnrollment = differenceInDays(new Date(), enrolledAt);
+      console.log(`Days since enrollment for ${enrolledDate}: ${daysSinceEnrollment}`);
+      return daysSinceEnrollment <= 2;
+    } catch (error) {
+      console.error("Error parsing enrolledDate:", error);
+      return false;
+    }
+  };
+
+  const handleOpenReviewModal = (courseId: string) => {
+    setShowReviewModal(courseId);
+    setRating(0);
+    setReviewText("");
+  };
+
+  const handleSubmitReview = async (courseId: string, courseTitle: string) => {
+    if (!user || !user._id) {
+      toast.error("Please log in to submit a review");
+      navigate("/login");
+      return;
+    }
+    if (rating < 1 || rating > 5) {
+      toast.error("Please select a rating between 1 and 5");
+      return;
+    }
+    try {
+      const response = await submitCourseReview(user._id, courseId, rating, reviewText);
+      if (response.success) {
+        toast.success(`Review submitted for ${courseTitle}`);
+        setEnrolledCourses((prev) =>
+          prev.map((course) =>
+            course._id === courseId ? { ...course, rating, review: reviewText } : course
+          )
+        );
+        setShowReviewModal(null);
+      } else {
+        toast.error(response.message || "Failed to submit review");
+      }
+    } catch (err: any) {
+      console.error("Submit review error:", err);
+      toast.error("Failed to submit review");
+    }
   };
 
   if (loading) {
@@ -234,9 +288,19 @@ const EnrolledCourses: React.FC = () => {
                       {course.enrolledDate ? format(new Date(course.enrolledDate), "PPP 'at' p") : "Unknown"}
                     </p>
                     <p><strong>Status:</strong> {course.status}</p>
-                    {!isCancelEligible(course.enrolledDate) && (
+                    {course.rating && (
+                      <p>
+                        <strong>Your Rating:</strong> {course.rating}/5
+                      </p>
+                    )}
+                    {course.review && (
+                      <p>
+                        <strong>Your Review:</strong> {course.review}
+                      </p>
+                    )}
+                    {!isCancelEligible(course.enrolledDate) && course.status !== "Cancelled" && (
                       <p className="text-red-500 text-xs">
-                        Refund period expired (7 days)
+                        Refund period expired (2 days) or invalid enrollment date
                       </p>
                     )}
                   </div>
@@ -250,17 +314,25 @@ const EnrolledCourses: React.FC = () => {
                     <Button
                       onClick={() => handleCancelEnrollment(course._id, course.courseTitle)}
                       className="flex-1 bg-red-500 hover:bg-red-600"
-                      disabled={course.status !== "Active" || !isCancelEligible(course.enrolledDate)}
+                      disabled={course.status === "Cancelled" || !isCancelEligible(course.enrolledDate)}
                       title={
-                        !isCancelEligible(course.enrolledDate)
-                          ? "Refund period has expired (7 days)"
-                          : course.status !== "Active"
-                            ? "Cancellation not available for this status"
+                        course.status === "Cancelled"
+                          ? "Cancellation not available for this status"
+                          : !isCancelEligible(course.enrolledDate)
+                            ? "Refund period has expired (2 days) or invalid enrollment date"
                             : ""
                       }
                     >
                       Cancel Enrollment
                     </Button>
+                    {course.status === "Completed" && !course.rating && (
+                      <Button
+                        onClick={() => handleOpenReviewModal(course._id)}
+                        className="flex-1 bg-green-500 hover:bg-green-600"
+                      >
+                        Rate & Review
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -268,6 +340,64 @@ const EnrolledCourses: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Review Modal */}
+      {showReviewModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <Card className="max-w-md w-full">
+            <CardHeader>
+              <h2 className="text-xl font-semibold text-primary">
+                Review {enrolledCourses.find((c) => c._id === showReviewModal)?.courseTitle}
+              </h2>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Rating</label>
+                <div className="flex space-x-1">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      onClick={() => setRating(star)}
+                      className={`text-2xl ${rating >= star ? "text-yellow-400" : "text-gray-300"}`}
+                    >
+                      ★
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Review</label>
+                <textarea
+                  value={reviewText}
+                  onChange={(e) => setReviewText(e.target.value)}
+                  className="w-full p-2 border rounded-md"
+                  rows={4}
+                  placeholder="Write your review here..."
+                />
+              </div>
+              <div className="flex space-x-2">
+                <Button
+                  onClick={() =>
+                    handleSubmitReview(
+                      showReviewModal,
+                      enrolledCourses.find((c) => c._id === showReviewModal)?.courseTitle || ""
+                    )
+                  }
+                  className="flex-1 bg-primary hover:bg-primary-dark"
+                >
+                  Submit Review
+                </Button>
+                <Button
+                  onClick={() => setShowReviewModal(null)}
+                  className="flex-1 bg-gray-500 hover:bg-gray-600"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };

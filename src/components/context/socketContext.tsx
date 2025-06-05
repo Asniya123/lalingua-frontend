@@ -13,6 +13,7 @@ import {
 import {
   endCallTutor,
   setRoomId,
+  setShowOutgoingCall,
   setShowVideoCall,
   setVideoCall,
 } from "../../redux/slice/tutorSlice";
@@ -166,30 +167,36 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         return;
       }
 
-      if (user && user._id === data._id && getRole() === "user") {
-        dispatch(setShowIncomingVideoCall({
-          _id: data._id,
-          tutorId: data.from,
-          callType: data.callType,
-          tutorName: data.tutorName || "Unknown Tutor",
-          tutorImage: data.tutorImage || "/logos/avatar.avif",
-          roomId: data.roomId,
-        }));
-      } else {
+      const role = getRole();
+      if (role !== "user" || !user || user._id !== data._id) {
         console.log("Ignoring incoming-video-call: not a student or ID mismatch", {
           userId: user?._id,
+          tutorId: tutor?._id,
           dataId: data._id,
-          role: getRole(),
+          role,
         });
+        // Explicitly clear incoming call state for non-students
+        if (tutor || admin) {
+          dispatch(setShowIncomingVideoCall(null));
+        }
+        return;
       }
+
+      console.log(`Student ${user._id} received incoming call from tutor ${data.from}`);
+      dispatch(setShowIncomingVideoCall({
+        _id: data._id,
+        tutorId: data.from,
+        callType: data.callType,
+        tutorName: data.tutorName || "Unknown Tutor",
+        tutorImage: data.tutorImage || "/logos/avatar.avif",
+        roomId: data.roomId,
+      }));
     };
 
     const handleAcceptedCall = (data: any) => {
-      console.log("Received accepted-call:", data);
+      console.log("Received accepted-call:", JSON.stringify(data, null, 2));
       const missingFields = [];
       if (!data.roomId) missingFields.push("roomId");
-      if (!data.from) missingFields.push("from");
-      if (!data._id) missingFields.push("_id");
 
       if (missingFields.length > 0) {
         console.error(`Invalid accepted-call data. Missing: ${missingFields.join(", ")}`, data);
@@ -197,73 +204,79 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         return;
       }
 
-      if (tutor && tutor._id === data.from && getRole() === "tutor") {
+      const role = getRole();
+      if (tutor && tutor._id === data.to && role === "tutor") {
+        console.log(`Tutor ${tutor._id} received accepted-call, joining room ${data.roomId}`);
         dispatch(setRoomId(data.roomId));
         dispatch(setShowVideoCall(true));
-        socket.emit("tutor-call-accept", {
-          roomId: data.roomId,
-          tutorId: data.from,
-          from: data._id,
+        dispatch(setShowOutgoingCall(false)); // Hide outgoing call UI
+      } else if (user && user._id === data.from && role === "user") {
+        console.log(`Student ${user._id} received accepted-call confirmation, joining room ${data.roomId}`);
+        dispatch(setRoomIdUser(data.roomId));
+        dispatch(setShowVideoCallUser(true));
+        dispatch(setShowIncomingVideoCall(null)); // Clear incoming call UI
+      } else {
+        console.log("Ignoring accepted-call: ID or role mismatch", {
+          tutorId: tutor?._id,
+          userId: user?._id,
+          dataTo: data.to,
+          dataFrom: data.from,
+          role,
         });
       }
     };
 
-    const handleTutorCallAccept = (data: any) => {
-      console.log("Received tutor-call-accept:", data);
-      if (!data.roomId) {
-        console.error("Invalid tutor-call-accept data. Missing: roomId", data);
-        toast.error("Invalid tutor acceptance data received");
-        return;
-      }
+    // Fixed handleRejectCall function in SocketProvider
 
-      if (user && getRole() === "user") {
-        dispatch(setRoomIdUser(data.roomId));
-        dispatch(setShowVideoCallUser(true));
-      }
-    };
+const handleRejectCall = (data: any) => {
+  console.log("Received reject-call:", JSON.stringify(data, null, 2));
+  
+  // Show appropriate toast message
+  if (data.message) {
+    toast.error(data.message);
+  } else {
+    toast.error("Call ended/rejected");
+  }
+  
+  // Clean up all call-related states for both user and tutor
+  const role = getRole();
+  
+  if (role === "user" || role === "student") {
+    // Student side cleanup
+    dispatch(setVideoCallUser(null));
+    dispatch(setShowIncomingVideoCall(null));
+    dispatch(setShowVideoCallUser(false));
+    dispatch(setRoomIdUser(null));
+    dispatch(endCallUser());
+  } 
+  
+  if (role === "tutor") {
+    // Tutor side cleanup
+    dispatch(setVideoCall(null));
+    dispatch(setShowOutgoingCall(false));
+    dispatch(setShowVideoCall(false));
+    dispatch(setRoomId(null));
+    dispatch(endCallTutor());
+  }
+  
+  console.log(`Call cleanup completed for ${role}`);
+};
 
-    const handleRejectCall = (data: any) => {
-      console.log("Received reject-call:", data);
-      toast.error("Call ended/rejected");
-      dispatch(setVideoCall(null));
-      dispatch(endCallTutor());
-      dispatch(endCallUser());
-    };
-
-    const handleUserLeft = (data: string | undefined) => {
-      console.log("Received user-left:", data);
-      if (!data) {
-        console.error("Invalid user-left data: userId is undefined");
-        return;
-      }
-
-      if (data === user?._id) {
-        dispatch(setShowVideoCallUser(false));
-        dispatch(setRoomIdUser(null));
-        dispatch(setVideoCallUser(null));
-        dispatch(setShowIncomingVideoCall(null));
-      } else if (data === tutor?._id) {
-        dispatch(setShowVideoCall(false));
-        dispatch(setRoomId(null));
-        dispatch(setVideoCall(null));
-      }
-    };
+    
 
     socket.on("incoming-video-call", handleIncomingVideoCall);
     socket.on("accepted-call", handleAcceptedCall);
-    socket.on("tutor-call-accept", handleTutorCallAccept);
     socket.on("reject-call", handleRejectCall);
-    socket.on("user-left", handleUserLeft);
+   
 
     return () => {
       console.log("Cleaning up socket event listeners");
       socket.off("incoming-video-call", handleIncomingVideoCall);
       socket.off("accepted-call", handleAcceptedCall);
-      socket.off("tutor-call-accept", handleTutorCallAccept);
       socket.off("reject-call", handleRejectCall);
-      socket.off("user-left", handleUserLeft);
+    
     };
-  }, [socket, dispatch, user, tutor, isSocketLoading, getRole]);
+  }, [socket, dispatch, user, tutor, admin, isSocketLoading, getRole]);
 
   return (
     <SocketContext.Provider value={{ socket, onlineUsers, isSocketLoading }}>

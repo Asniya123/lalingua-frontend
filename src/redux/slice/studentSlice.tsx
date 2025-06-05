@@ -1,4 +1,3 @@
-// studentSlice.ts
 import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
 import * as service from "../../services/userAuth";
 import Cookies from "js-cookie";
@@ -12,7 +11,7 @@ interface VideoCallPayload {
   callType: string;
   tutorName: string;
   tutorImage: string;
-  roomId: string | null;
+  roomId: string;
 }
 
 interface VideoCallData {
@@ -26,24 +25,40 @@ interface VideoCallData {
   studentImage: string | null;
 }
 
+interface AuthState {
+  student: Student | null;
+  loading: boolean;
+  error: string | null;
+  isError: boolean;
+  isSuccess: boolean;
+  isLoading: boolean;
+  message: string;
+  updateSuccess: boolean;
+  selectedLanguageId: string | null;
+  showIncomingVideoCall: VideoCallPayload | null;
+  videoCall: VideoCallData | null;
+  showVideoCallUser: boolean;
+  roomIdUser: string | null;
+}
+
 const userString = Cookies.get("user");
 console.log("studentSlice: userString from cookies:", userString);
 const student: Student | null = userString ? JSON.parse(userString) : null;
 
-const initialState = {
+const initialState: AuthState = {
   student,
   loading: false,
-  error: null as string | null,
+  error: null,
   isError: false,
   isSuccess: false,
   isLoading: false,
   message: "",
   updateSuccess: false,
-  selectedLanguageId: null as string | null,
-  showIncomingVideoCall: null as VideoCallPayload | null,
-  videoCall: null as VideoCallData | null,
+  selectedLanguageId: null,
+  showIncomingVideoCall: null,
+  videoCall: null,
   showVideoCallUser: false,
-  roomIdUser: null as string | null,
+  roomIdUser: null,
 };
 
 export const register = createAsyncThunk<Student, Student, { rejectValue: string }>(
@@ -89,9 +104,9 @@ export const logout = createAsyncThunk("auth/logout", async (_, { dispatch }) =>
   Cookies.remove("selectedLanguageId");
 });
 
-export const fetchStudentProfile = createAsyncThunk(
+export const fetchStudentProfile = createAsyncThunk<Student, string, { rejectValue: string }>(
   "student/fetchProfile",
-  async (token: string, { rejectWithValue }) => {
+  async (token, { rejectWithValue }) => {
     try {
       const response = await API.get("/getProfile", {
         headers: { Authorization: `Bearer ${token}` },
@@ -138,22 +153,27 @@ const authSlice = createSlice({
   name: "auth",
   initialState,
   reducers: {
-    reset: (state, action) => {
+    reset: (state, action: PayloadAction<string>) => {
       state.isLoading = false;
       state.isError = false;
       state.isSuccess = false;
-      state.message = action.payload as string;
+      state.message = action.payload;
     },
-    setStudent: (state, action) => {
+    setStudent: (state, action: PayloadAction<Student | null>) => {
       state.student = action.payload;
-      Cookies.set("user", JSON.stringify(action.payload));
+      if (action.payload) {
+        Cookies.set("user", JSON.stringify(action.payload));
+      } else {
+        Cookies.remove("user");
+      }
     },
-    resetAuthState(state) {
+    resetAuthState: (state) => {
       state.student = null;
       state.showIncomingVideoCall = null;
       state.videoCall = null;
       state.showVideoCallUser = false;
       state.roomIdUser = null;
+      state.selectedLanguageId = null;
       Cookies.remove("user");
       Cookies.remove("userToken");
       Cookies.remove("selectedLanguageId");
@@ -163,8 +183,9 @@ const authSlice = createSlice({
     },
     clearStudent: (state) => {
       state.student = null;
+      Cookies.remove("user");
     },
-    setLanguage: (state, action) => {
+    setLanguage: (state, action: PayloadAction<string>) => {
       state.selectedLanguageId = action.payload;
       Cookies.set("selectedLanguageId", action.payload);
     },
@@ -175,19 +196,22 @@ const authSlice = createSlice({
     setShowIncomingVideoCall: (state, action: PayloadAction<VideoCallPayload | null>) => {
       console.log("setShowIncomingVideoCall dispatched with:", action.payload);
       state.showIncomingVideoCall = action.payload;
-      console.log("showIncomingVideoCall updated to:", state.showIncomingVideoCall);
+      console.log("showIncomingVideoCall state updated to:", state.showIncomingVideoCall);
     },
     setVideoCallUser: (state, action: PayloadAction<VideoCallData | null>) => {
+      console.log("setVideoCallUser dispatched with:", action.payload);
       state.videoCall = action.payload;
-      console.log("videoCall updated:", state.videoCall);
+      console.log("videoCall state updated to:", state.videoCall);
     },
     setShowVideoCallUser: (state, action: PayloadAction<boolean>) => {
+      console.log("setShowVideoCallUser dispatched with:", action.payload);
       state.showVideoCallUser = action.payload;
-      console.log("showVideoCallUser updated:", state.showVideoCallUser);
+      console.log("showVideoCallUser state updated to:", state.showVideoCallUser);
     },
     setRoomIdUser: (state, action: PayloadAction<string | null>) => {
+      console.log("setRoomIdUser dispatched with:", action.payload);
       state.roomIdUser = action.payload;
-      console.log("roomIdUser updated:", state.roomIdUser);
+      console.log("roomIdUser state updated to:", state.roomIdUser);
     },
     endCallUser: (state) => {
       console.log("endCallUser dispatched");
@@ -196,6 +220,12 @@ const authSlice = createSlice({
       state.showVideoCallUser = false;
       state.roomIdUser = null;
       localStorage.removeItem("IncomingVideoCall");
+      console.log("endCallUser state updated:", {
+        videoCall: state.videoCall,
+        showIncomingVideoCall: state.showIncomingVideoCall,
+        showVideoCallUser: state.showVideoCallUser,
+        roomIdUser: state.roomIdUser,
+      });
     },
     resetVideoCallState: (state) => {
       console.log("resetVideoCallState dispatched");
@@ -204,18 +234,28 @@ const authSlice = createSlice({
       state.showVideoCallUser = false;
       state.roomIdUser = null;
       localStorage.removeItem("IncomingVideoCall");
+      console.log("resetVideoCallState state updated:", {
+        videoCall: state.videoCall,
+        showIncomingVideoCall: state.showIncomingVideoCall,
+        showVideoCallUser: state.showVideoCallUser,
+        roomIdUser: state.roomIdUser,
+      });
     },
   },
   extraReducers: (builder) => {
     builder
       .addCase(register.pending, (state) => {
         state.isLoading = true;
+        state.isError = false;
+        state.isSuccess = false;
+        state.message = "";
       })
       .addCase(register.fulfilled, (state, action) => {
         state.isLoading = false;
         state.isSuccess = true;
         state.student = action.payload;
         Cookies.set("user", JSON.stringify(action.payload));
+        state.message = "Registration successful";
       })
       .addCase(register.rejected, (state, action) => {
         state.isLoading = false;
@@ -225,12 +265,16 @@ const authSlice = createSlice({
       })
       .addCase(login.pending, (state) => {
         state.isLoading = true;
+        state.isError = false;
+        state.isSuccess = false;
+        state.message = "";
       })
       .addCase(login.fulfilled, (state, action) => {
         state.isLoading = false;
         state.isSuccess = true;
         state.student = action.payload;
         Cookies.set("user", JSON.stringify(action.payload));
+        state.message = "Login successful";
       })
       .addCase(login.rejected, (state, action) => {
         state.isLoading = false;
@@ -240,12 +284,16 @@ const authSlice = createSlice({
       })
       .addCase(googleLogin.pending, (state) => {
         state.isLoading = true;
+        state.isError = false;
+        state.isSuccess = false;
+        state.message = "";
       })
       .addCase(googleLogin.fulfilled, (state, action) => {
         state.isLoading = false;
         state.isSuccess = true;
         state.student = action.payload;
         Cookies.set("user", JSON.stringify(action.payload));
+        state.message = "Google login successful";
       })
       .addCase(googleLogin.rejected, (state, action) => {
         state.isLoading = false;
@@ -260,16 +308,19 @@ const authSlice = createSlice({
         state.videoCall = null;
         state.showVideoCallUser = false;
         state.roomIdUser = null;
-        Cookies.remove("user");
-        Cookies.remove("userToken");
-        Cookies.remove("selectedLanguageId");
+        state.isLoading = false;
+        state.isError = false;
+        state.isSuccess = false;
+        state.message = "Logout successful";
       })
       .addCase(fetchStudentProfile.pending, (state) => {
+        state.loading = true;
         state.error = null;
       })
       .addCase(fetchStudentProfile.fulfilled, (state, action) => {
         state.loading = false;
         state.student = action.payload;
+        Cookies.set("user", JSON.stringify(action.payload));
       })
       .addCase(fetchStudentProfile.rejected, (state, action) => {
         state.loading = false;
@@ -278,28 +329,34 @@ const authSlice = createSlice({
       .addCase(updateStudentProfile.pending, (state) => {
         state.loading = true;
         state.error = null;
+        state.updateSuccess = false;
       })
       .addCase(updateStudentProfile.fulfilled, (state, action) => {
         state.loading = false;
         state.student = action.payload;
         state.updateSuccess = true;
+        Cookies.set("user", JSON.stringify(action.payload));
       })
       .addCase(updateStudentProfile.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
+        state.updateSuccess = false;
       })
       .addCase(uploadProfilePicture.pending, (state) => {
         state.loading = true;
         state.error = null;
+        state.updateSuccess = false;
       })
       .addCase(uploadProfilePicture.fulfilled, (state, action) => {
         state.loading = false;
         state.student = action.payload;
         state.updateSuccess = true;
+        Cookies.set("user", JSON.stringify(action.payload));
       })
       .addCase(uploadProfilePicture.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
+        state.updateSuccess = false;
       });
   },
 });

@@ -41,14 +41,16 @@ function IncomingVideoCall() {
 
     console.log("Emitting reject-call:", {
       to: showIncomingVideoCall.tutorId,
-      sender: "user",
+      sender: "student", // Changed from "user" to "student"
       name: showIncomingVideoCall.tutorName,
+      from: student?._id, // Added from field
     });
 
     socket.emit("reject-call", {
       to: showIncomingVideoCall.tutorId,
-      sender: "user",
+      sender: "student", // Changed from "user" to "student"
       name: showIncomingVideoCall.tutorName,
+      from: student?._id, // Added from field for better tracking
     });
 
     dispatch(endCallUser());

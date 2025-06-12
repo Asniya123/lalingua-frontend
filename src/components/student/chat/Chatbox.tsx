@@ -28,7 +28,7 @@ interface ChatProps {
   tutorId?: string;
 }
 
-export interface recieverData {
+export interface RecieverData {
   name: string;
   _id: string;
   profilePicture: string;
@@ -39,20 +39,13 @@ export default function ChatBox({ roomId, userId, tutorId }: ChatProps) {
   const dispatch = useDispatch<AppDispatch>();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
-  const [reciever, setReciever] = useState<recieverData | null>(null);
+  const [reciever, setReciever] = useState<RecieverData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const { socket, onlineUsers } = useSocket();
-  const isOnline = reciever?._id ? onlineUsers?.includes(reciever._id) : false;
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const fileInput = useRef<HTMLInputElement>(null);
+  const { socket, onlineUsers, isSocketLoading } = useSocket();
+  const isOnline = reciever?._id ? onlineUsers?.includes(reciever._id) : tutorId ? onlineUsers?.includes(tutorId) : false;
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const fileInput = useRef<HTMLInputElement | null>(null);
   const [isEmojiPickerVisible, setIsEmojiPickerVisible] = useState(false);
-
-  console.log("ChatBox state:", {
-    socketId: socket?.id,
-    userId: user?._id,
-    roomId,
-    tutorId,
-  });
 
   const scrollToBottom = () => {
     if (messagesEndRef.current) {
@@ -61,10 +54,15 @@ export default function ChatBox({ roomId, userId, tutorId }: ChatProps) {
   };
 
   useEffect(() => {
-    if (!socket || !socket.connected) {
-      console.error("Socket is null or not connected");
+    console.log("Online users:", onlineUsers);
+    console.log("Receiver ID:", reciever?._id);
+    console.log("Tutor ID:", tutorId);
+    console.log("Is tutor online?", isOnline);
+
+    if (!socket || isSocketLoading) {
+      console.error("Socket is not connected or is loading", { socketId: socket?.id, isSocketLoading });
       setIsLoading(false);
-      toast.error("Chat server not connected");
+      toast.error("Chat server is not connected");
       return;
     }
 
@@ -75,63 +73,64 @@ export default function ChatBox({ roomId, userId, tutorId }: ChatProps) {
       return;
     }
 
-    if (socket && user?._id) {
-      console.log("Registering student with socket:", user._id);
-      socket.emit("register-user", { userId: user._id, role: "user" });
+    console.log("ChatBox initializing with:", { socketId: socket.id, userId: user._id, roomId, tutorId });
+    socket.emit("register-user", { userId: user._id, role: "user" });
+    socket.emit("joined-room", roomId);
 
-      socket.emit("joined-room", roomId);
-
-      socket.off("new-message").on("new-message", (message: Message) => {
-        console.log("New message received:", message);
-        if (message.chatId === roomId) {
-          const normalizedMessage = {
-            ...message,
-            message_time: message.message_time ? new Date(message.message_time) : new Date(),
-          };
-          setMessages((prev) => [...prev, normalizedMessage]);
-          if (document.visibilityState === "visible") {
-            socket.emit("mark-messages-read", { chatId: roomId, userId: user._id });
-          }
-        }
-      });
-
-      socket.off("message-read").on("message-read", (data: { chatId: string; userId: string }) => {
-        if (data.chatId === roomId && data.userId !== user._id) {
-          setMessages((prev) =>
-            prev.map((msg) =>
-              msg.senderId === user._id && !msg.isRead ? { ...msg, isRead: true } : msg
-            )
+    const handleNewMessage = (message: Message) => {
+      console.log("Received new-message:", JSON.stringify(message, null, 2));
+      if (message.chatId === roomId) {
+        const normalizedMessage = {
+          ...message,
+          message_time: message.message_time ? new Date(message.message_time) : new Date(),
+        };
+        setMessages((prev) => {
+          const exists = prev.some(
+            (msg) =>
+              (msg._id && msg._id === normalizedMessage._id) ||
+              (msg.senderId === normalizedMessage.senderId &&
+               msg.message_time.toString() === normalizedMessage.message_time.toString() &&
+               msg.message === normalizedMessage.message)
           );
+          if (!exists) {
+            return [...prev, normalizedMessage];
+          }
+          return prev;
+        });
+        if (document.visibilityState === "visible") {
+          socket.emit("mark-messages-read", { chatId: roomId, userId: user._id });
         }
-      });
+      }
+    };
 
-      socket.off("reject-call").on("reject-call", (data: any) => {
-        console.log("Received reject-call:", data);
-        if (data.sender === "tutor") {
-          toast.error("Call rejected by tutor");
-        } else if (data.sender === "user") {
-          toast.error("Call rejected");
-        }
-      });
-    }
+    const handleMessageRead = (data: { chatId: string; userId: string }) => {
+      console.log("Received message-read:", JSON.stringify(data, null, 2));
+      if (data.chatId === roomId && data.userId !== user._id) {
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.senderId === user._id && !msg.isRead ? { ...msg, isRead: true } : msg
+          )
+        );
+      }
+    };
+
+    socket.on("new-message", handleNewMessage);
+    socket.on("message-read", handleMessageRead);
+    socket.on("reject-call", (data: any) => {
+      console.log("Received reject-call:", JSON.stringify(data, null, 2));
+      toast.error(data.message || "Call rejected");
+    });
 
     const fetchRecieverData = async () => {
       try {
         setIsLoading(true);
         console.log("Fetching room messages for:", { roomId, userId: user._id });
 
-        // First attempt to fetch room messages with the provided roomId
         let recieverUser = await fetch_room_message(roomId, user._id);
-        console.log("fetch_room_message response:", recieverUser);
+        console.log("fetch_room_message response:", JSON.stringify(recieverUser, null, 2));
 
         if (recieverUser.success && recieverUser.room) {
-          const roomData = recieverUser.room;
-          console.log("Room data from fetch_room_message:", roomData);
-
-          if (!Array.isArray(roomData.participants) || roomData.participants.length < 2) {
-            throw new Error("Invalid room data: missing or insufficient participants");
-          }
-
+          const roomData = Array.isArray(recieverUser.room) ? recieverUser.room[0] : recieverUser.room;
           const otherParticipant = roomData.participants.find(
             (p: { _id: string }) => p._id !== user._id
           );
@@ -154,21 +153,14 @@ export default function ChatBox({ roomId, userId, tutorId }: ChatProps) {
               : []
           );
 
-          if (socket) {
-            socket.emit("mark-messages-read", { chatId: roomId, userId: user._id });
-          }
+          socket.emit("mark-messages-read", { chatId: roomId, userId: user._id });
         } else if (tutorId) {
-          // Fallback: Create or fetch a room using tutorId
           console.log("Falling back to fetch_room with tutorId:", tutorId);
           const roomResponse = await fetch_room(tutorId, user._id);
-          console.log("fetch_room response:", roomResponse);
+          console.log("fetch_room response:", JSON.stringify(roomResponse, null, 2));
 
           if (roomResponse.success && roomResponse.room) {
-            const roomData = roomResponse.room;
-            if (!Array.isArray(roomData.participants) || roomData.participants.length < 2) {
-              throw new Error("Invalid room data in fallback: missing or invalid participants");
-            }
-
+            const roomData = Array.isArray(roomResponse.room) ? roomResponse.room[0] : roomResponse.room;
             const tutor = roomData.participants.find(
               (u: { _id: string }) => u._id !== user._id
             );
@@ -200,7 +192,6 @@ export default function ChatBox({ roomId, userId, tutorId }: ChatProps) {
           message: error.message,
           response: error.response?.data,
           status: error.response?.status,
-          tutorId,
         });
         toast.error("Error loading chat room: " + (error.message || "Unknown error"));
       } finally {
@@ -211,13 +202,11 @@ export default function ChatBox({ roomId, userId, tutorId }: ChatProps) {
     fetchRecieverData();
 
     return () => {
-      if (socket) {
-        socket.off("new-message");
-        socket.off("message-read");
-        socket.off("reject-call");
-      }
+      socket.off("new-message", handleNewMessage);
+      socket.off("message-read", handleMessageRead);
+      socket.off("reject-call");
     };
-  }, [socket, user?._id, roomId, tutorId, dispatch]); // Removed isLoading from dependencies
+  }, [socket, isSocketLoading, user?._id, roomId, tutorId, dispatch]);
 
   useEffect(() => {
     scrollToBottom();
@@ -225,9 +214,10 @@ export default function ChatBox({ roomId, userId, tutorId }: ChatProps) {
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!socket || !user?._id || !reciever?._id) {
+    if (!socket || isSocketLoading || !user?._id || !reciever?._id) {
       console.error("Cannot send message: Missing required data", {
         socket: !!socket,
+        isSocketLoading,
         userId: user?._id,
         recieverId: reciever?._id,
       });
@@ -241,6 +231,7 @@ export default function ChatBox({ roomId, userId, tutorId }: ChatProps) {
     }
 
     const message: Message = {
+      _id: `temp-${Date.now()}-${Math.random()}`,
       senderId: user._id,
       message: newMessage,
       message_time: new Date(),
@@ -249,12 +240,11 @@ export default function ChatBox({ roomId, userId, tutorId }: ChatProps) {
       chatId: roomId,
     };
 
-    console.log("Emitting message:", message);
+    console.log("Sending message:", JSON.stringify(message, null, 2));
     socket.emit("message", {
       ...message,
       roomId,
       recieverId: reciever._id,
-      to: reciever._id,
     });
 
     setMessages((prev) => [...prev, message]);
@@ -262,7 +252,7 @@ export default function ChatBox({ roomId, userId, tutorId }: ChatProps) {
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!socket || !user?._id || !reciever?._id) {
+    if (!socket || isSocketLoading || !user?._id || !reciever?._id) {
       toast.error("Cannot upload image: Missing required data");
       return;
     }
@@ -279,6 +269,7 @@ export default function ChatBox({ roomId, userId, tutorId }: ChatProps) {
     try {
       const url = await uploadToCloudinary(file);
       const message: Message = {
+        _id: `temp-${Date.now()}-${Math.random()}`,
         senderId: user._id,
         message: url,
         message_time: new Date(),
@@ -287,12 +278,11 @@ export default function ChatBox({ roomId, userId, tutorId }: ChatProps) {
         chatId: roomId,
       };
 
-      console.log("Emitting image message:", message);
+      console.log("Sending image message:", JSON.stringify(message, null, 2));
       socket.emit("message", {
         ...message,
         roomId,
         recieverId: reciever._id,
-        to: reciever._id,
       });
 
       setMessages((prev) => [...prev, message]);
@@ -317,22 +307,23 @@ export default function ChatBox({ roomId, userId, tutorId }: ChatProps) {
   if (!reciever) {
     return (
       <div className="flex h-full items-center justify-center text-gray-500">
-        <div className="text-center">
-          <p className="text-lg font-medium">Unable to load chat</p>
-          <p className="text-sm">Please select another contact or try again.</p>
-        </div>
+        <p className="text-lg font-medium">Unable to load chat</p>
+        <p className="text-sm">Please select another contact or try again.</p>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col w-full h-full bg-gradient-to-b from-gray-50 to-gray-100">
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-4 shadow-lg flex items-center justify-between">
+    <div className="flex flex-col w-full h-full bg-pink-100">
+      <div
+        className="bg-gradient-to-r p-4 shadow-lg flex items-center justify-between"
+        style={{ background: "linear-gradient(to right, #8C2C2C, #A03333)" }}
+      >
         <div className="flex items-center">
           <img
             src={getProfilePictureSrc(reciever.profilePicture)}
-            alt={reciever.name}
-            className="w-[5%] rounded-[50%]"
+            alt={reciever.name || "User"}
+            className="w-10 h-10 rounded-full"
           />
           <div className="ml-3">
             <p className="text-lg font-semibold text-white">{reciever.name || "Unknown"}</p>
@@ -354,11 +345,11 @@ export default function ChatBox({ roomId, userId, tutorId }: ChatProps) {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth="2"
-                d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
-              ></path>
+                d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 0 01-2 2h-5l-5 5v-5z"
+              />
             </svg>
-            <p className="text-gray-500 text-lg font-medium">Say Hello</p>
-            <p className="text-gray-400 text-sm">Start the conversation with {reciever.name || "this tutor"}!</p>
+            <p className="text-gray-600 text-lg font-semibold">Say Hello!</p>
+            <p className="text-gray-500 text-sm">Start the conversation with {reciever.name || "this tutor"}.</p>
           </div>
         ) : (
           messages.map((msg) => {
@@ -397,9 +388,7 @@ export default function ChatBox({ roomId, userId, tutorId }: ChatProps) {
                     <span className="text-xs text-gray-300">{format(messageTime, "hh:mm a")}</span>
                     {msg.senderId === user?._id && (
                       <span className="flex items-center ml-2">
-                        {!isOnline ? (
-                          <Check className="h-3 w-3 text-gray-500" />
-                        ) : msg.isRead ? (
+                        {isOnline && msg.isRead ? (
                           <>
                             <Check className="h-3 w-3 text-blue-300" />
                             <Check className="h-3 w-3 -ml-1 text-blue-300" />

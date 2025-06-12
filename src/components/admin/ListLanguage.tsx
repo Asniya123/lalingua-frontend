@@ -5,22 +5,35 @@ import { useNavigate } from "react-router-dom";
 import AdminLayout from "../layouts/adminHeader";
 import { ILanguage } from "../../interfaces/admin";
 import { Button } from "../../components/UI/Button";
+import  SearchBar  from "../../components/UI/SearchBar";
 
 const ListLanguage = () => {
   const [languages, setLanguages] = useState<ILanguage[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [totalLanguages, setTotalLanguages] = useState(0);
+  const [searchTerm, setSearchTerm] = useState<string>("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
   const navigate = useNavigate();
+
+  useEffect(() => {
+      fetchLanguages();
+    }, [currentPage, searchTerm]); 
+  
+    
+    useEffect(() => {
+      if (searchTerm) {
+        setCurrentPage(1);
+      }
+    }, [searchTerm]);
 
   const fetchLanguages = async () => {
     setLoading(true);
     setError("");
 
     try {
-      const response = await listLanguage(currentPage, itemsPerPage);
+      const response = await listLanguage(currentPage, itemsPerPage, searchTerm);
       console.log("API Response:", response);
 
       if (response.success && response.data && Array.isArray(response.data.languages)) {
@@ -62,9 +75,7 @@ const ListLanguage = () => {
     }
   };
 
-  useEffect(() => {
-    fetchLanguages();
-  }, [currentPage]);
+
 
   const totalPage = Math.ceil(totalLanguages / itemsPerPage);
 
@@ -72,6 +83,20 @@ const ListLanguage = () => {
     setCurrentPage(page);
     fetchLanguages();
   };
+
+  const handleSearch = (term: string) => {
+    setSearchTerm(term);
+  };
+
+  useEffect(() => {
+      const timeoutId = setTimeout(() => {
+        if (searchTerm !== '') {
+          fetchLanguages();
+        }
+      }, 300); // 300ms delay
+  
+      return () => clearTimeout(timeoutId);
+    }, [searchTerm]);
 
   return (
     <AdminLayout>
@@ -85,7 +110,10 @@ const ListLanguage = () => {
             <Edit className="w-5 h-5 mr-2" /> Add New Language
           </button>
         </div>
-
+        <SearchBar
+          onSearch={setSearchTerm}
+          placeholder="Search languages by name..."
+        />
         {loading && <p className="text-blue-600">Loading languages...</p>}
         {error && <p className="text-red-500">{error}</p>}
 
@@ -104,6 +132,11 @@ const ListLanguage = () => {
                   <tr key={language._id} className="border-b">
                     <td className="p-3">{language.name}</td>
                     <td className="p-3">
+                      <tr>
+                  <td colSpan={4} className="border border-gray-300 px-4 py-8 text-center text-gray-500">
+                    {searchTerm ? `No users found matching "${searchTerm}"` : "No users found"}
+                  </td>
+                </tr>
                       {language.imageUrl ? (
                         <img
                           src={language.imageUrl}

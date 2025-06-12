@@ -10,7 +10,7 @@ function IncomingVideoCall() {
   const { socket, isSocketLoading } = useSocket();
   const dispatch = useDispatch<AppDispatch>();
 
-  console.log("IncomingVideoCall state:", {
+  console.log("IncomingVideoCall:", {
     showIncomingVideoCall,
     studentId: student?._id,
     socket: !!socket,
@@ -21,13 +21,13 @@ function IncomingVideoCall() {
   if (isSocketLoading) {
     return (
       <div className="w-full h-full flex justify-center items-center z-50 fixed top-0 bg-black bg-opacity-50">
-        <div className="text-white">Connecting to server...</div>
+        <div className="text-white">Connecting...</div>
       </div>
     );
   }
 
   if (!socket || !socket.connected) {
-    console.error("Socket is null or not connected");
+    console.error("Socket not connected");
     toast.error("Chat server not connected");
     dispatch(endCallUser());
     return null;
@@ -35,21 +35,21 @@ function IncomingVideoCall() {
 
   const handleEndCall = async () => {
     if (!showIncomingVideoCall) {
-      console.error("No incoming call to end.");
+      console.error("No incoming call to end");
       return;
     }
 
     console.log("Emitting reject-call:", {
       to: showIncomingVideoCall.tutorId,
       sender: "student",
-      name: showIncomingVideoCall.tutorName,
+      name: student?.name,
       from: student?._id,
     });
 
     socket.emit("reject-call", {
       to: showIncomingVideoCall.tutorId,
       sender: "student",
-      name: showIncomingVideoCall.tutorName,
+      name: student?.name || "Student",
       from: student?._id,
     });
 
@@ -62,7 +62,7 @@ function IncomingVideoCall() {
         showIncomingVideoCall,
         studentId: student?._id,
       });
-      toast.error("Cannot accept call: Missing data");
+      toast.error("Cannot accept call");
       return;
     }
 
@@ -72,11 +72,8 @@ function IncomingVideoCall() {
       to: showIncomingVideoCall.tutorId,
     };
 
-    console.log("Emitting accept-incoming-call:", acceptData);
+    console.log("Emitting accept-incoming-call with payload:", acceptData);
     socket.emit("accept-incoming-call", acceptData);
-
-    dispatch(setRoomIdUser(showIncomingVideoCall.roomId));
-    dispatch(setShowVideoCallUser(true));
   };
 
   if (!showIncomingVideoCall) {
@@ -99,13 +96,13 @@ function IncomingVideoCall() {
         </div>
         <div className="flex m-2 mb-5 gap-7">
           <div
-            className="bg-green-500 w-12 h-12 text-white rounded-full flex justify-center items-center m-1 cursor-pointer hover:bg-green-600 transition-colors"
+            className="bg-green-500 w-12 h-12 text-white rounded-full flex justify-center items-center m-1 cursor-pointer hover:bg-green-600"
             onClick={handleAcceptCall}
           >
             <Call className="w-6 h-6" />
           </div>
           <div
-            className="bg-red-500 w-12 h-12 text-white rounded-full flex justify-center items-center m-1 cursor-pointer hover:bg-red-600 transition-colors"
+            className="bg-red-500 w-12 h-12 text-white rounded-full flex justify-center items-center m-1 cursor-pointer hover:bg-red-600"
             onClick={handleEndCall}
           >
             <CallEnd className="w-6 h-6" />

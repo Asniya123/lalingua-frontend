@@ -11,17 +11,36 @@ const badgeVariants = cva(
         secondary: "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
         outline: "text-foreground",
       },
+      size: {
+        sm: "px-2 py-0.5 text-xs",
+        md: "px-2.5 py-0.5 text-sm",
+        lg: "px-3 py-1 text-base",
+      },
+      shape: {
+        default: "rounded-full",
+        circle: "rounded-full aspect-square min-w-[1.5rem] justify-center",
+        square: "rounded-md",
+      },
     },
     defaultVariants: {
       variant: "default",
+      size: "md",
+      shape: "default",
     },
   }
 );
 
-export interface BadgeProps extends React.HTMLAttributes<HTMLDivElement>, VariantProps<typeof badgeVariants> {}
+export interface BadgeProps 
+  extends React.HTMLAttributes<HTMLDivElement>, 
+         VariantProps<typeof badgeVariants> {}
 
-function Badge({ className, variant, ...props }: BadgeProps) {
-  return <div className={cn(badgeVariants({ variant }), className)} {...props} />;
+function Badge({ className, variant, size, shape, ...props }: BadgeProps) {
+  return (
+    <div 
+      className={cn(badgeVariants({ variant, size, shape }), className)} 
+      {...props} 
+    />
+  );
 }
 
 export { Badge, badgeVariants };

@@ -25,11 +25,12 @@ export async function adminLogin(email: string, password: string): Promise<{
 
 export const getUsers = async (
   page: number = 1,
-  limit: number = 5
-): Promise<{ users: any[], total: number }> => {
+  limit: number = 5,
+  search: string = ""
+): Promise<{ users: any[]; total: number }> => {
   try {
     const response = await adminAPI.get(`/getUsers`, {
-      params: { page, limit },
+      params: { page, limit, search },
     });
     console.log("API Response:", response.data);
 
@@ -61,11 +62,12 @@ export const blockUnblock = async (userId: string, isBlocked: boolean) => {
 export const getTutor = async (
   page: number = 1,
   limit: number = 5,
-  status: string = 'approved'
-): Promise<{ tutors: any[], total: number }> => {
+  status: string = 'approved',
+  search: string = ""
+): Promise<{ tutors: any[]; total: number }> => {
   try {
     const response = await adminAPI.get(`/getTutor`, {
-      params: { page, limit, status },
+      params: { page, limit, status, search },
     });
     
     if (!response.data.success || !Array.isArray(response.data.data.tutors)) {
@@ -94,9 +96,10 @@ export const managingTutor = async (tutorId: string, isBlocked: boolean) => {
 };
 
 
-export const getTutorsApproveOrReject = async () => {
+export const getTutorsApproveOrReject = async (search: string = "") => {
   try {
-    const response = await adminAPI.get(`/getTutorManage`);
+    const response = await adminAPI.get(`/getTutorManage`, {params: {search},
+    });
     console.log("API Response:", response.data); 
     if (!Array.isArray(response.data.tutors)) { 
       throw new Error("Invalid response structure: Expected an array");
@@ -147,19 +150,20 @@ export async function addCategory(
 
 export async function listCategories(
   page: number = 1,
-  limit: number = 5
+  limit: number = 5,
+  search: string = ""
 ): Promise<{ success: boolean; data?: { categories: any[]; total: number }; message?: string }> {
   try {
     const response = await adminAPI.get("/listCategory", {
-      params: { page, limit }, 
+      params: { page, limit, search },
     });
 
     console.log("Categories fetched successfully:", response.data);
     return {
       success: true,
       data: {
-        categories: response.data.data.categories, 
-        total: response.data.data.pagination.totalItems, 
+        categories: response.data.data.categories,
+        total: response.data.data.pagination.totalItems,
       },
     };
   } catch (error: any) {
@@ -251,14 +255,14 @@ export async function addLanguage(
 
 
 
-export async function listLanguage(page: number = 1, limit: number = 5): Promise<{
+export async function listLanguage(page: number = 1, limit: number = 5, search: string = ""): Promise<{
   success: boolean;
   data?: { languages: ILanguage[]; pagination: { totalItems: number } };
   total: number;
   message?: string;
 }> {
   try {
-    const response = await adminAPI.get("/listLanguage", { params: { page, limit } });
+    const response = await adminAPI.get("/listLanguage", { params: { page, limit, search } });
     console.log("Raw API Response:", response);
     return {
       success: true,
@@ -326,16 +330,20 @@ export async function deleteLanguage(
 
 //Course
 
-export async function getCourses(currentPage: number, limit: number): Promise<{ success: boolean; message: string; courses: ICourse[]; total: number }> {
+export async function getCourses(
+  currentPage: number,
+  limit: number,
+  search: string = ""
+): Promise<{ success: boolean; message: string; courses: ICourse[]; total: number }> {
   try {
     const response = await adminAPI.get('/getCourses', {
-      params: { page: currentPage, limit },
+      params: { page: currentPage, limit, search },
     });
     return {
       success: true,
       message: 'Courses retrieved successfully',
-      courses: response.data.data.courses || [], 
-      total: response.data.data.pagination.totalItem || 0 
+      courses: response.data.data.courses || [],
+      total: response.data.data.pagination.totalItem || 0
     };
   } catch (error) {
     const axiosError = error as AxiosError<{ message?: string }>;

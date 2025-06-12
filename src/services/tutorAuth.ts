@@ -169,10 +169,10 @@ export async function addCourse(
   }
 }
 
-export async function listCourses(currentPage: number, limit: number): Promise<{ success: boolean; message: string; courses: ICourse[]; total: number }> {
+export async function listCourses(page: number=1, limit: number=5, search: string=""): Promise<{ success: boolean; message: string; courses: ICourse[]; total: number }> {
   try {
     const response = await tutorAPI.get('/listCourse', {
-      params: { page: currentPage, limit },
+      params: { page, limit, search},
       
     });
     return { 

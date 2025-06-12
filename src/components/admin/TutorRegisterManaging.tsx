@@ -11,6 +11,7 @@ import {
 } from "@heroui/react";
 import { getTutorsApproveOrReject, updateTutorStatus } from "../../services/adminAuth";
 import AdminLayout from "../layouts/adminHeader";
+import  SearchBar  from "../../components/UI/SearchBar";
 
 interface Tutor {
   status: string;
@@ -27,6 +28,7 @@ const TutorRegisterManaging = () => {
   const { isOpen: isApproveOpen, onOpen: onApproveOpen, onClose: onApproveClose } = useDisclosure();
   const [selectedTutor, setSelectedTutor] = useState<Tutor | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
+  const [searchTerm, setSearchTerm] = useState<string>("");
 
   useEffect(() => {
     fetchTutors();
@@ -83,6 +85,10 @@ const TutorRegisterManaging = () => {
     <AdminLayout>
     <div className="max-w-4xl mx-auto mt-10">
       <h2 className="text-2xl font-semibold mb-4 text-center">Tutor Management</h2>
+       <SearchBar
+          onSearch={setSearchTerm}
+          placeholder="Search tutors by name, email, or status..."
+        />
       {error && <p className="text-center text-red-500">{error}</p>}
       <div className="overflow-x-auto">
         <table className="w-full border-collapse border border-gray-300 shadow-md">

@@ -1,5 +1,3 @@
-"use client"
-
 import type React from "react"
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
@@ -20,8 +18,6 @@ interface Category {
   description?: string
 }
 
-
-
 interface FormValues {
   courseTitle: string
   category: string
@@ -29,7 +25,6 @@ interface FormValues {
   description: string
   price: number
   image: File | null
- 
 }
 
 const validationSchema = Yup.object({
@@ -54,18 +49,6 @@ const validationSchema = Yup.object({
       if (!value || !(value instanceof File)) return false
       return ["image/jpeg", "image/png", "image/gif"].includes(value.type)
     }),
-  syllabus: Yup.array()
-    .of(
-      Yup.object({
-        title: Yup.string()
-          .min(3, "Syllabus item title must be at least 3 characters")
-          .max(100, "Syllabus item title must not exceed 100 characters")
-          .required("Syllabus item title is required"),
-        description: Yup.string().max(500, "Syllabus item description must not exceed 500 characters").optional(),
-      }),
-    )
-    .min(1, "At least one syllabus item is required")
-    .required("Syllabus is required"),
 })
 
 const AddCourse: React.FC = () => {
@@ -85,7 +68,6 @@ const AddCourse: React.FC = () => {
     description: "",
     price: 0,
     image: null,
-   
   }
 
   useEffect(() => {
@@ -113,12 +95,27 @@ const AddCourse: React.FC = () => {
     fetchData()
   }, [])
 
-  const handleSubmit = async (values: FormValues, { setSubmitting }: any) => {
+  const handleSubmit = async (values: FormValues, { setSubmitting, setFieldError }: any) => {
     setSubmitting(true)
     setGeneralError(null)
 
     try {
-      const imageUrl = await ImageUpload(values.image!)
+      // Validate required fields
+      if (!values.image) {
+        setFieldError('image', 'Course image is required')
+        setSubmitting(false)
+        return
+      }
+
+      if (!tutorId) {
+        setGeneralError("Tutor ID not found. Please log in again.")
+        setSubmitting(false)
+        return
+      }
+
+      console.log("Uploading image...")
+      const imageUrl = await ImageUpload(values.image)
+      console.log("Image uploaded successfully:", imageUrl)
 
       const courseData = {
         courseTitle: values.courseTitle,
@@ -127,18 +124,22 @@ const AddCourse: React.FC = () => {
         language: values.language,
         description: values.description,
         regularPrice: values.price,
-        tutorId: tutorId || "",
-     
+        tutorId: tutorId,
       }
 
+      console.log("Submitting course data:", courseData)
       const result = await addCourse(courseData)
+      
+      console.log("API Response:", result)
+      
       if (result.success) {
-        toast.success(result.message)
+        toast.success(result.message || "Course added successfully")
         navigate("/tutor/listCourse")
       } else {
-        throw new Error("API did not return success")
+        throw new Error(result.message || "Failed to add course")
       }
     } catch (error) {
+      console.error("Error adding course:", error)
       const axiosError = error as AxiosError<{ error?: string }>
       const errorMessage = axiosError.response?.data?.error || axiosError.message || "Failed to add course"
       setGeneralError(errorMessage)
@@ -159,7 +160,7 @@ const AddCourse: React.FC = () => {
             </div>
 
             <Formik initialValues={initialValues} validationSchema={validationSchema} onSubmit={handleSubmit}>
-              {({ isSubmitting, values }) => (
+              {({ isSubmitting, values, setFieldValue }) => (
                 <Form className="space-y-6">
                   <div className="mb-6">
                     <label className="block text-gray-700 font-medium mb-2">Course Title</label>
@@ -235,8 +236,6 @@ const AddCourse: React.FC = () => {
                     <ErrorMessage name="price" component="p" className="text-red-500 text-sm mt-1" />
                   </div>
 
-                 
-
                   <div className="mb-6">
                     <label className="block text-gray-700 font-medium mb-2">Course Image</label>
                     <input
@@ -244,7 +243,7 @@ const AddCourse: React.FC = () => {
                       accept="image/*"
                       onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
                         const file = event.target.files?.[0] || null
-                        values.image = file
+                        setFieldValue('image', file) // Use setFieldValue instead of direct assignment
                         if (file) {
                           setImagePreview(URL.createObjectURL(file))
                         } else {
@@ -255,7 +254,7 @@ const AddCourse: React.FC = () => {
                     />
                     {imagePreview && (
                       <img
-                        src={imagePreview || "/placeholder.svg"}
+                        src={imagePreview}
                         alt="Image Preview"
                         className="w-32 h-32 object-cover rounded-lg border border-gray-300 shadow-md mt-2"
                       />
@@ -268,7 +267,7 @@ const AddCourse: React.FC = () => {
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full bg-emerald-600 text-white py-3 px-6 rounded-lg hover:bg-emerald-700 transition duration-300"
+                    className="w-full bg-emerald-600 text-white py-3 px-6 rounded-lg hover:bg-emerald-700 transition duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isSubmitting ? "Adding Course..." : "Add Course"}
                   </button>

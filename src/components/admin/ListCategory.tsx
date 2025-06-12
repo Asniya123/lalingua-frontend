@@ -4,6 +4,8 @@ import { Trash2, Edit } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import AdminLayout from "../layouts/adminHeader";
 import { Button } from "../../components/UI/Button";
+import SearchBar from "../../components/UI/SearchBar";
+
 
 interface Category {
   _id: string;
@@ -16,6 +18,7 @@ const CategoryList = () => {
   const [totalCategories, setTotalCategories] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [searchTerm, setSearchTerm] = useState<string>("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
@@ -26,7 +29,7 @@ const CategoryList = () => {
     setError("");
 
     try {
-      const response = await listCategories(currentPage, itemsPerPage); 
+      const response = await listCategories(currentPage, itemsPerPage, searchTerm); 
       console.log("API Response:", response);
 
       if (response.success && response.data) {
@@ -67,7 +70,13 @@ const CategoryList = () => {
 
   useEffect(() => {
     fetchCategories();
-  }, [currentPage]); 
+  }, [currentPage, searchTerm]); 
+
+  useEffect(() => {
+      if (searchTerm) {
+        setCurrentPage(1);
+      }
+    }, [searchTerm]);
 
   // Pagination
   const totalPages = Math.ceil(totalCategories / itemsPerPage);
@@ -75,6 +84,20 @@ const CategoryList = () => {
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
   };
+
+   const handleSearch = (term: string) => {
+    setSearchTerm(term);
+  };
+
+  useEffect(() => {
+      const timeoutId = setTimeout(() => {
+        if (searchTerm !== '') {
+          fetchCategories();
+        }
+      }, 300); // 300ms delay
+  
+      return () => clearTimeout(timeoutId);
+    }, [searchTerm]);
 
   return (
     <AdminLayout>
@@ -88,7 +111,10 @@ const CategoryList = () => {
             <Edit className="w-5 h-5 mr-2" /> Add New Category
           </Button>
         </div>
-
+        <SearchBar
+          onSearch={setSearchTerm}
+          placeholder="Search categories by name or description..."
+        />
         {loading && <p className="text-blue-600">Loading categories...</p>}
         {error && <p className="text-red-500">{error}</p>}
 
@@ -108,6 +134,11 @@ const CategoryList = () => {
                     <td className="p-3">{category.name}</td>
                     <td className="p-3">{category.description || "No description"}</td>
                     <td className="p-3 flex gap-3">
+                      <tr>
+                  <td colSpan={4} className="border border-gray-300 px-4 py-8 text-center text-gray-500">
+                    {searchTerm ? `No users found matching "${searchTerm}"` : "No users found"}
+                  </td>
+                </tr>
                       <Button
                         onClick={() => handleEdit(category)}
                         className="bg-green-600 text-white px-3 py-1 rounded-lg flex items-center"

@@ -28,17 +28,26 @@ export function UserHeader() {
   const [notificationDropdownOpen, setNotificationDropdownOpen] = useState(false);
   const [notifications, setNotifications] = useState<INotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [isReady, setIsReady] = useState(false);
-
-  useEffect(() => {
-    setIsReady(true); // Ensure router context is available
-  }, []);
 
   const checkAuthStatus = () => {
     const userToken = Cookies.get("userToken");
     const googleAuth = localStorage.getItem("googleAuth");
-    setIsLoggedIn(!!userToken);
-    setIsGoogleSignIn(!!googleAuth);
+    const hasReduxUser = !!user;
+    
+    // User is logged in if they have either a token OR a Redux user object
+    const isUserLoggedIn = !!userToken || hasReduxUser;
+    const isGoogleUser = !!googleAuth;
+    
+    console.log("Auth Status Check:", { 
+      userToken, 
+      googleAuth, 
+      hasReduxUser, 
+      isUserLoggedIn, 
+      isGoogleUser 
+    });
+    
+    setIsLoggedIn(isUserLoggedIn);
+    setIsGoogleSignIn(isGoogleUser);
   };
 
   useEffect(() => {
@@ -65,7 +74,7 @@ export function UserHeader() {
     return () => {
       window.removeEventListener("storage", handleStorageChange);
     };
-  }, [isLoggedIn, isGoogleSignIn]);
+  }, [isLoggedIn, isGoogleSignIn, user]); // Added 'user' to dependency array
 
   const markNotificationRead = async (notificationId: string) => {
     try {
@@ -84,28 +93,68 @@ export function UserHeader() {
   };
 
   const handleNotificationClick = () => {
-    if (!isReady) return;
     setNotificationDropdownOpen(!notificationDropdownOpen);
     setDropdownOpen(false);
   };
 
   const handleLogout = () => {
-    if (!isReady) return;
-    Cookies.remove("userToken");
-    dispatch(clearStudent());
-    localStorage.removeItem("googleAuth");
-    setIsLoggedIn(false);
-    setIsGoogleSignIn(false);
-    setDropdownOpen(false);
-    setNotificationDropdownOpen(false);
-    setNotifications([]);
-    setUnreadCount(0);
-    navigate("/login");
+    console.log("Logout clicked");
+    try {
+      Cookies.remove("userToken");
+      dispatch(clearStudent());
+      localStorage.removeItem("googleAuth");
+      setIsLoggedIn(false);
+      setIsGoogleSignIn(false);
+      setDropdownOpen(false);
+      setNotificationDropdownOpen(false);
+      setNotifications([]);
+      setUnreadCount(0);
+      navigate("/login");
+      console.log("Logout navigation attempted");
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
   };
 
-  if (!isReady) {
-    return null;
-  }
+  const handleLoginClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log("Login button clicked");
+    console.log("Current pathname:", window.location.pathname);
+    console.log("Navigate function:", typeof navigate);
+    
+    try {
+      navigate("/login");
+      console.log("Navigate to /login called successfully");
+    } catch (error) {
+      console.error("Navigation error:", error);
+      // Fallback navigation
+      window.location.href = "/login";
+    }
+  };
+
+  const handleSignUpClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log("Sign up button clicked");
+    
+    try {
+      navigate("/register");
+      console.log("Navigate to /register called successfully");
+    } catch (error) {
+      console.error("Navigation error:", error);
+      // Fallback navigation
+      window.location.href = "/register";
+    }
+  };
+
+  // Debug: Log the current auth state
+  console.log("UserHeader render - Auth state:", { 
+    isLoggedIn, 
+    isGoogleSignIn, 
+    user: !!user,
+    showLoginButtons: !isLoggedIn && !isGoogleSignIn 
+  });
 
   return (
     <header className="bg-[#8b2525]">
@@ -131,7 +180,7 @@ export function UserHeader() {
             ))}
           </nav>
           <div className="flex items-center gap-4 relative">
-            <button className="flex items-center gap-1">
+            <button className="flex items-center gap-1 text-white">
               <Globe className="h-6 w-6" />
               <span>En</span>
               <ChevronDown className="h-4 w-4" />
@@ -161,7 +210,7 @@ export function UserHeader() {
                         notifications.map((notification) => (
                           <div
                             key={notification._id}
-                            className={`px-4 py-2 hover:bg-gray-100 ${
+                            className={`px-4 py-2 hover:bg-gray-100 cursor-pointer ${
                               notification.isRead ? "bg-gray-50" : "bg-blue-50"
                             }`}
                             onClick={() => {
@@ -197,14 +246,16 @@ export function UserHeader() {
             {!isLoggedIn && !isGoogleSignIn ? (
               <>
                 <button
-                  className="bg-white text-[#8b2525] border border-white px-4 py-2 rounded-md hover:bg-gray-100"
-                  onClick={() => isReady && navigate("/login")}
+                  className="bg-white text-[#8b2525] border border-white px-4 py-2 rounded-md hover:bg-gray-100 cursor-pointer"
+                  onClick={handleLoginClick}
+                  type="button"
                 >
                   Log In
                 </button>
                 <button
-                  className="bg-red-500 px-4 py-2 rounded-md hover:bg-red-600"
-                  onClick={() => isReady && navigate("/register")}
+                  className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 cursor-pointer"
+                  onClick={handleSignUpClick}
+                  type="button"
                 >
                   Sign Up
                 </button>

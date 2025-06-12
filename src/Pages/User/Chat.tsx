@@ -14,7 +14,7 @@ export interface Contact {
   chatId?: string;
   name?: string;
   profilePicture?: string | null;
-  lastMessage?: string | null | Message;
+  lastMessage?: string;
   unReadCount: number;
   isOnline?: boolean;
   lastMessageRead?: boolean;

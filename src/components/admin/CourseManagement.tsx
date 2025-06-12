@@ -10,25 +10,33 @@ import { Card, CardContent, CardFooter } from "../UI/card";
 import { Separator } from "../UI/Separator";
 import { Lock, Unlock, Eye, BookOpen } from "lucide-react";
 import AdminLayout from "../../components/layouts/adminHeader";
+import  SearchBar  from "../../components/UI/SearchBar";
 
 const CourseManagement: React.FC = () => {
   const navigate = useNavigate();
   const [courses, setCourses] = useState<ICourse[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+ const [searchTerm, setSearchTerm] = useState<string>("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCourses, setTotalCourses] = useState(0);
   const coursesPerPage = 5;
 
   useEffect(() => {
     fetchCourses();
-  }, [currentPage]);
+  }, [currentPage, searchTerm]);
+
+  useEffect(() => {
+      if (searchTerm) {
+        setCurrentPage(1);
+      }
+    }, [searchTerm]);
 
   const fetchCourses = async () => {
     setLoading(true);
     setError(null);
     try {
-      const result = await getCourses(currentPage, coursesPerPage);
+      const result = await getCourses(currentPage, coursesPerPage, searchTerm);
       setCourses(result.courses as ICourse[]);
       setTotalCourses(result.total);
     } catch (error) {
@@ -43,6 +51,20 @@ const CourseManagement: React.FC = () => {
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
   };
+
+  const handleSearch = (term: string) => {
+    setSearchTerm(term);
+  };
+
+  useEffect(() => {
+      const timeoutId = setTimeout(() => {
+        if (searchTerm !== '') {
+          fetchCourses();
+        }
+      }, 300); // 300ms delay
+  
+      return () => clearTimeout(timeoutId);
+    }, [searchTerm]);
 
   const handleBlockCourse = async (courseId: string, currentStatus: boolean) => {
     try {
@@ -68,7 +90,7 @@ const CourseManagement: React.FC = () => {
     navigate(`/admin/courseDetails/${courseId}`);
   };
 
-  return (
+ return (
     <AdminLayout>
       <div className="p-6 bg-gray-100 min-h-screen">
         <div className="max-w-5xl mx-auto bg-white rounded-xl shadow-md overflow-hidden">
@@ -78,6 +100,10 @@ const CourseManagement: React.FC = () => {
           </div>
 
           <div className="p-6">
+            <SearchBar
+              onSearch={setSearchTerm}
+              placeholder="Search courses by title, description, category, or language..."
+            />
             <div className="flex justify-between items-center mb-8">
               <div className="text-sm text-gray-500">
                 {totalCourses > 0 ? (
@@ -101,9 +127,27 @@ const CourseManagement: React.FC = () => {
                 <div className="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
                   <BookOpen className="h-10 w-10 text-gray-400" />
                 </div>
-                <h3 className="text-lg font-medium text-gray-900">No courses yet</h3>
-                <p className="mt-2 text-sm text-gray-500">Courses will appear here once created</p>
+                <h3 className="text-lg font-medium text-gray-900">
+                  {searchTerm ? "No courses found" : "No courses yet"}
+                </h3>
+                <p className="mt-2 text-sm text-gray-500">
+                  {searchTerm 
+                    ? `No courses found matching "${searchTerm}". Try adjusting your search terms.`
+                    : "Courses will appear here once created"
+                  }
+                </p>
+                {searchTerm && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSearchTerm("")}
+                    className="mt-3 text-orange-600 border-orange-200 hover:bg-orange-50"
+                  >
+                    Clear Search
+                  </Button>
+                )}
               </div>
+              
             ) : (
               <div className="grid gap-6 md:grid-cols-2">
                 {courses.map((course) => (

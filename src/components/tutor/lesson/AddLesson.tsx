@@ -162,7 +162,7 @@ const AddLesson: React.FC = () => {
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Lesson Title <span className="text-red-500">*</span></label>
                     <Field
-                      as={Input}
+                      as="textarea"
                       name="title"
                       placeholder="Enter lesson title"
                       disabled={loading}

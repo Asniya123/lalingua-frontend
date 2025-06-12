@@ -22,13 +22,18 @@ import ChatPage from "../../Pages/User/Chat";
 const StudentRoute = () => {
   return (
     <Routes>
+      {/* Public home page - accessible to everyone */}
       <Route path="/" element={<Layouts />}>
         <Route index element={<Home />} />
       </Route>
 
-      <Route path="/register" element={<Signup />} />
-      <Route path="/login" element={<Login />} />
+      {/* Public routes - protected from authenticated users */}
+      <Route element={<PathProtect />}>
+        <Route path="/register" element={<Signup />} />
+        <Route path="/login" element={<Login />} />
+      </Route>
 
+      {/* Protected routes - require authentication */}
       <Route element={<ProtectedRoute />}>
         <Route element={<Layouts />}>
           <Route path="/getProfile" element={<StudentProfile />} />
@@ -36,6 +41,7 @@ const StudentRoute = () => {
           <Route path="/languages" element={<LanguageSelectors />} />
           <Route path="/learning" element={<ChooseLearning />} />
 
+          {/* Routes that require language selection */}
           <Route element={<RequireLanguage />}>
             <Route path="/course" element={<Courses />} />
             <Route path="/courseDetail/:id" element={<CourseDetail />} />

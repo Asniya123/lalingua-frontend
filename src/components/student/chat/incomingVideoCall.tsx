@@ -1,6 +1,7 @@
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "../../../redux/store";
 import { useSocket } from "../../context/useSocket";
+import { useEffect } from "react";
 import { endCallUser, setRoomIdUser, setShowVideoCallUser } from "../../../redux/slice/studentSlice";
 import { Call, CallEnd } from "@mui/icons-material";
 import toast from "react-hot-toast";
@@ -18,6 +19,26 @@ function IncomingVideoCall() {
     isSocketLoading,
   });
 
+  useEffect(() => {
+    if (!socket || !socket.connected || isSocketLoading) {
+      console.log("Socket not ready:", { socket: !!socket, connected: socket?.connected, isSocketLoading });
+      return;
+    }
+
+    const handleCallRejection = (data: any) => {
+      console.log("Received reject-call:", data);
+      toast.error(data.message || "Call was ended by tutor");
+      dispatch(endCallUser());
+    };
+
+    socket.on("reject-call", handleCallRejection);
+
+    return () => {
+      console.log("Cleaning up IncomingVideoCall useEffect");
+      socket.off("reject-call", handleCallRejection);
+    };
+  }, [socket, isSocketLoading, dispatch]);
+
   if (isSocketLoading) {
     return (
       <div className="w-full h-full flex justify-center items-center z-50 fixed top-0 bg-black bg-opacity-50">
@@ -30,6 +51,10 @@ function IncomingVideoCall() {
     console.error("Socket not connected");
     toast.error("Chat server not connected");
     dispatch(endCallUser());
+    return null;
+  }
+
+  if (!showIncomingVideoCall) {
     return null;
   }
 
@@ -51,6 +76,7 @@ function IncomingVideoCall() {
       sender: "student",
       name: student?.name || "Student",
       from: student?._id,
+      message: "Call rejected by student",
     });
 
     dispatch(endCallUser());
@@ -74,11 +100,13 @@ function IncomingVideoCall() {
 
     console.log("Emitting accept-incoming-call with payload:", acceptData);
     socket.emit("accept-incoming-call", acceptData);
-  };
 
-  if (!showIncomingVideoCall) {
-    return null;
-  }
+    // Update state to show video call
+    dispatch(setRoomIdUser(showIncomingVideoCall.roomId));
+    dispatch(setShowVideoCallUser(true));
+    dispatch(endCallUser()); // Clear incoming call modal
+    toast.success("Call accepted! Joining video call...");
+  };
 
   return (
     <div className="w-full h-full flex justify-center items-center z-50 fixed top-0 bg-black bg-opacity-50">
@@ -92,6 +120,9 @@ function IncomingVideoCall() {
             className="w-24 h-24 rounded-full object-cover"
             src={showIncomingVideoCall?.tutorImage || "/logos/avatar.avif"}
             alt="Tutor profile"
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = "/logos/avatar.avif";
+            }}
           />
         </div>
         <div className="flex m-2 mb-5 gap-7">

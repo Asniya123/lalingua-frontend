@@ -104,12 +104,14 @@ function OutgoingVideoCall() {
         sender: "tutor",
         name: videoCall.studentName || videoCall.userName || "Unknown Student",
         from: tutor._id,
+        message: "Call ended by tutor or timed out",
       });
       socket.emit("reject-call", {
         to: videoCall.userID,
         sender: "tutor",
         name: videoCall.studentName || videoCall.userName || "Unknown Student",
         from: tutor._id,
+        message: "Call ended by tutor or timed out",
       });
     }
 

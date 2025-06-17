@@ -290,6 +290,33 @@ export async function listLessons(courseId: string): Promise<{ success: boolean;
   }
 }
 
+export const completeLesson = async (courseId: string | undefined, lessonId: string) => {
+  if (!courseId) {
+    throw new Error("Course ID is required");
+  }
+  const response = await API.post('/${courseId}/lessons/${lessonId}/complete', { courseId, lessonId });
+  return response.data;
+};
+
+export const getCompletedLessons = async (courseId: string) => {
+  const response = await API.get(`/${courseId}/completed-lessons`);
+  return response.data;
+};
+
+export const markCourseCompleted = async (courseId: string) => {
+  try {
+    const response = await API.post(`/${courseId}/complete`);
+    return {
+      success: true,
+      message: response.data.message || "Course marked as completed",
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      message: error.response?.data?.message || "Failed to mark course as completed",
+    };
+  }
+};
  
 //Language
 
@@ -429,6 +456,32 @@ export const submitCourseReview = async (
       rating,
       review,
     });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+
+export const updateCourseReview = async (
+  reviewId: string,
+  rating: number,
+  review: string
+) => {
+  try {
+    const response = await API.put(`/course-review/${reviewId}`, {
+      rating,
+      review,
+    });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const deleteCourseReview = async (reviewId: string) => {
+  try {
+    const response = await API.delete(`/course-review/${reviewId}`);
     return response.data;
   } catch (error) {
     throw error;

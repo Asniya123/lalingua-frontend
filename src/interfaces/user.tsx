@@ -98,7 +98,11 @@ export interface OrderResponse {
 export interface IEnrolledCourse extends ICourse {
   pricePaid: number;
   enrolledDate?: string;
-  status: "Active" | "Cancelled" | "Expired";
+  status: "Active" | "Cancelled" | "Expired" | "completed";
+  isCompleted?: boolean;
+  totalLessons: number;
+  completedLessons: number;
+  review?: IReview;
 }
 
 

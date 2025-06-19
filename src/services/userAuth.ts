@@ -207,7 +207,7 @@ export const getCourse = async (
   message?: string;
 }> => {
   try {
-    const response = await API.get(`/courses`, { 
+    const response = await API.get(`/courses`, {
       params: {
         page,
         limit,
@@ -217,13 +217,12 @@ export const getCourse = async (
         language: language || undefined,
       },
     });
-    
     console.log("API Response Data:", response.data);
     return {
       success: true,
-      courses: response.data.courses,
-      category: response.data.category,
-      total: response.data.total,
+      courses: response.data.courses || [],
+      category: response.data.category || [],
+      total: response.data.total || 0,
     };
   } catch (error: any) {
     console.error("Error fetching courses:", error);
@@ -447,14 +446,14 @@ export const submitCourseReview = async (
   userId: string,
   courseId: string,
   rating: number,
-  review: string
+  comment: string
 ) => {
   try {
     const response = await API.post(`/course-review`, {
       userId,
       courseId,
       rating,
-      review,
+      comment,
     });
     return response.data;
   } catch (error) {
@@ -466,12 +465,12 @@ export const submitCourseReview = async (
 export const updateCourseReview = async (
   reviewId: string,
   rating: number,
-  review: string
+  comment: string
 ) => {
   try {
     const response = await API.put(`/course-review/${reviewId}`, {
       rating,
-      review,
+      comment,
     });
     return response.data;
   } catch (error) {
@@ -488,7 +487,7 @@ export const deleteCourseReview = async (reviewId: string) => {
   }
 };
 
-export async function listReviews(courseId: string): Promise<{ success: boolean; message: string; reviews: { [lessonId: string]: IReview[] } }> {
+export async function listReviews(courseId: string): Promise<{ success: boolean; message: string; reviews: IReview[] }> {
   try {
     const response = await API.get(`/listReviews/${courseId}`, {
       headers: { "Content-Type": "application/json" },
@@ -496,11 +495,32 @@ export async function listReviews(courseId: string): Promise<{ success: boolean;
     return {
       success: true,
       message: "Reviews retrieved successfully",
-      reviews: response.data.reviews || {},
+      reviews: response.data.data || [], 
     };
   } catch (error) {
     const axiosError = error as AxiosError<{ message?: string }>;
     console.error("Error listing reviews:", axiosError.response?.data || axiosError.message);
     throw new Error(axiosError.response?.data?.message || "Failed to list reviews");
+  }
+}
+
+
+export async function getStudentById(studentId: string): Promise<{ success: boolean; message: string; data?: Student }> {
+  try {
+    const response = await API.get(`/students/${studentId}`, { 
+      headers: { "Content-Type": "application/json" },
+    });
+    return {
+      success: true,
+      message: "Student retrieved successfully",
+      data: response.data.data,
+    };
+  } catch (error) {
+    const axiosError = error as AxiosError<{ message?: string }>;
+    console.error("Error fetching student:", axiosError.response?.data || axiosError.message);
+    return {
+      success: false,
+      message: axiosError.response?.data?.message || "Failed to fetch student",
+    };
   }
 }

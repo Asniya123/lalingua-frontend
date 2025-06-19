@@ -46,3 +46,21 @@ export  interface ILesson {
     introVideoUrl?: string;
     syllabus?: { title: string; description?: string };
   }
+
+
+  export interface IEnrolledStudent {
+  student: {
+    _id: string;
+    name: string;
+    profilePicture?: string;
+  };
+  course: {
+    _id: string;
+    courseTitle: string;
+  };
+  review?: {
+    rating: number;
+    comment?: string;
+  };
+  progress: number;
+}

@@ -1,19 +1,14 @@
-
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Star } from "lucide-react";
 import { Button } from "../../UI/Button";
 import { Badge } from "../../UI/Badge";
 import { Card, CardHeader, CardContent } from "../../UI/card";
-import { getCourseById, createRazorpayOrder, enrollCourse, wallet_payment } from "../../../services/userAuth";
+import { getCourseById, createRazorpayOrder, enrollCourse, wallet_payment, getStudentById, listReviews } from "../../../services/userAuth"; 
 import { toast } from "react-toastify";
 import { useSelector } from "react-redux";
 import { RootState } from "../../../redux/store";
-import { ICourse } from "../../../interfaces/user";
-
-interface Student {
-  _id: string;
-}
+import Student, { ICourse, IReview } from "../../../interfaces/user";
 
 interface RazorpayResponse {
   razorpay_payment_id: string;
@@ -51,6 +46,8 @@ const CourseDetail: React.FC = () => {
   const [isEnrolled, setIsEnrolled] = useState<boolean>(false);
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'razorpay' | 'wallet'>('razorpay');
+  const [reviews, setReviews] = useState<IReview[]>([]);
+  const [students, setStudents] = useState<{ [key: string]: Student }>({}); 
   const user = useSelector((state: RootState) => state.auth.student) as Student | null;
 
   useEffect(() => {
@@ -59,6 +56,7 @@ const CourseDetail: React.FC = () => {
     checkEnrollmentStatus();
     if (user?._id) {
       fetchWalletBalance();
+      fetchReviews();
     }
   }, [id, user]);
 
@@ -106,6 +104,48 @@ const CourseDetail: React.FC = () => {
     } catch (err) {
       console.error("Error fetching wallet balance:", err);
       toast.error("Failed to load wallet balance");
+    }
+  };
+
+  const fetchReviews = async () => {
+    if (!id) return;
+    try {
+      const response = await listReviews(id);
+      console.log("Reviews response:", JSON.stringify(response, null, 2)); // Debug log
+      if (response.success) {
+        setReviews(response.reviews);
+
+        const userIds = response.reviews.map((review) => review.userId).filter((id): id is string => id !== undefined);
+        const uniqueUserIds = [...new Set(userIds)];
+        console.log("Unique userIds:", uniqueUserIds); // Debug log
+        const studentPromises = uniqueUserIds.map((userId) => fetchStudentDetails(userId));
+        const studentData = await Promise.all(studentPromises);
+        console.log("Student data:", JSON.stringify(studentData, null, 2)); // Debug log
+        const studentsMap = studentData.reduce((acc, student) => {
+          if (student.success && student.data) {
+            acc[student.data._id || ""] = student.data;
+          }
+          return acc;
+        }, {} as { [key: string]: Student });
+        console.log("Students map:", studentsMap); // Debug log
+        setStudents(studentsMap);
+      } else {
+        toast.error(response.message || "Failed to load reviews");
+      }
+    } catch (err) {
+      console.error("Error fetching reviews:", err);
+      toast.error("Failed to load reviews");
+    }
+  };
+
+  const fetchStudentDetails = async (userId: string): Promise<{ success: boolean; message: string; data?: Student }> => {
+    try {
+      const response = await getStudentById(userId); 
+      console.log(`Student response for ${userId}:`, JSON.stringify(response, null, 2)); // Debug log
+      return response.success ? response : { success: false, message: "Student not found" };
+    } catch (err) {
+      console.error(`Error fetching student ${userId}:`, err);
+      return { success: false, message: "Failed to fetch student" };
     }
   };
 
@@ -253,7 +293,7 @@ const CourseDetail: React.FC = () => {
                   <>
                     {course.tutor.profilePicture ? (
                       <img
-                        src={course.tutor.profilePicture}
+                        src={course.tutor.profilePicture as string}
                         alt={course.tutor.name}
                         className="w-10 h-10 rounded-full object-cover"
                       />
@@ -391,6 +431,50 @@ const CourseDetail: React.FC = () => {
                   </div>
                 ) : (
                   <p className="text-muted-foreground">No lessons available for preview.</p>
+                )}
+                {reviews.length > 0 && (
+                  <div className="mt-6">
+                    <h3 className="text-xl font-semibold mb-4">User Reviews</h3>
+                    {reviews.map((review) => {
+                      const student = students[review.userId || ""] || { name: "Anonymous", profilePicture: null };
+                      console.log("Review:", review, "Student:", student); // Debug log
+                      return (
+                        <div key={review._id} className="border-b pb-4 mb-4 last:border-b-0">
+                          <div className="flex items-center space-x-3 mb-2">
+                            {student.profilePicture ? (
+                              <img
+                                src={student.profilePicture as string}
+                                alt={student.name || "User"}
+                                className="w-10 h-10 rounded-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center">
+                                <span className="text-gray-600 text-sm">{student.name?.charAt(0) || "U"}</span>
+                              </div>
+                            )}
+                            <span className="text-sm font-medium text-gray-700">{student.name || "Anonymous"}</span>
+                          </div>
+                          <div className="flex items-center space-x-1 mb-2">
+                            {[...Array(5)].map((_, i) => (
+                              <Star
+                                key={i}
+                                className={`h-5 w-5 ${i < review.rating ? "fill-amber-400 text-amber-400" : "fill-muted text-muted"}`}
+                              />
+                            ))}
+                            <span className="text-sm text-muted-foreground ml-2">
+                              ({review.rating}/5)
+                            </span>
+                          </div>
+                          {review.comment && (
+                            <p className="text-sm text-gray-600 italic">"{review.comment}"</p>
+                          )}
+                          <p className="text-xs text-gray-500 mt-1">
+                            {review.createdAt ? new Date(review.createdAt).toLocaleDateString() : "Unknown date"}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
                 )}
               </CardContent>
             </Card>

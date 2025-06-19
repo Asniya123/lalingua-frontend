@@ -1,5 +1,5 @@
 import axios, { Axios, AxiosError } from "axios";
-import Tutor, { ICourse, ILesson } from "../interfaces/tutor.js";
+import Tutor, { ICourse, IEnrolledStudent, ILesson } from "../interfaces/tutor.js";
 import tutorAPI from "../api/tutorInstance.js";
 import Cookies from "js-cookie";
 import API from "../api/axiosInstance.js";
@@ -400,3 +400,36 @@ export async function getEnrolledStudents(tutorId: string, token: string): Promi
     throw new Error(errorMessage);
   }
 }
+
+
+//EnrolledStudents
+
+export const getEnrolledStudentsByTutor = async (): Promise<{
+  success: boolean;
+  enrolledStudents: IEnrolledStudent[];
+  total: number;
+  message?: string;
+}> => {
+  try {
+    console.log("Calling API to fetch enrolled students");
+    const response = await tutorAPI.get("/enrolled-students");
+    console.log("API Response Data:", response.data);
+    return {
+      success: true,
+      enrolledStudents: response.data.enrolledStudents || [],
+      total: response.data.total || 0,
+    };
+  } catch (error: any) {
+    console.error("Error fetching enrolled students:", {
+      status: error.response?.status,
+      data: error.response?.data,
+      message: error.message,
+    });
+    return {
+      success: false,
+      enrolledStudents: [],
+      total: 0,
+      message: error.response?.data?.message || "Failed to fetch enrolled students",
+    };
+  }
+};

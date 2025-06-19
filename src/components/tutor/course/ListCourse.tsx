@@ -235,12 +235,6 @@ const ListCourse: React.FC = () => {
                       <div className="absolute top-4 right-4 bg-gradient-to-r from-yellow-400 to-orange-400 text-white font-bold px-4 py-2 rounded-full text-sm shadow-lg">
                         ${course.regularPrice}
                       </div>
-                      <div className="absolute bottom-4 left-4 flex items-center gap-2">
-                        <div className="bg-white/90 backdrop-blur-sm rounded-full px-3 py-1 flex items-center gap-1">
-                          <Star className="h-3 w-3 text-yellow-500 fill-current" />
-                          <span className="text-xs font-medium text-gray-700">4.8</span>
-                        </div>
-                      </div>
                     </div>
 
                     <CardContent className="p-6">

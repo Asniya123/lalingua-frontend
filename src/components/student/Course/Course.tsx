@@ -1,3 +1,4 @@
+// Course.tsx
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
@@ -60,65 +61,63 @@ const Course: React.FC = () => {
   };
 
   const fetchCourses = async () => {
-  setLoading(true);
-  setError(null);
-  try {
-    const response = await getCourse(
-      currentPage,
-      limit,
-      searchBar.trim() || undefined,
-      selectedCategory === "all" ? undefined : selectedCategory,
-      sortBy,
-      selectedLanguageId ?? undefined
-    );
-    console.log("Frontend Response:", response);
-    if (response.success) {
-      const newCourses = response.courses || [];
-      const newCategories = response.category || [];
-      setCourses([...newCourses]);
-      setCategories([...newCategories]);
-      // Force totalCourses to 20 for testing
-      const total = 20; // Override response.total
-      setTotalCourses(total);
-      console.log("Total Courses Set:", total, "Total Pages:", Math.ceil(total / limit));
-
-      const counts: { [key: string]: number } = { all: total || 0 };
-      newCourses.forEach((course: ICourse) => {
-        const catId =
-          typeof course.category === "object" && course.category?._id
-            ? course.category._id
-            : course.category?.toString();
-        if (catId) counts[catId] = (counts[catId] || 0) + 1;
-      });
-      setCategoryCounts(counts);
-
-      console.log("State Updated:", {
-        courses: newCourses.length,
-        categories: newCategories.length,
-        totalCourses: total,
-        totalPages: Math.ceil(total / limit),
-        selectedLanguageId,
-        searchBar,
-        selectedCategory,
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await getCourse(
+        currentPage,
+        limit,
+        searchBar.trim() || undefined,
+        selectedCategory === "all" ? undefined : selectedCategory,
         sortBy,
-      });
-    } else {
-      setCourses([]);
-      setCategories([]);
+        selectedLanguageId ?? undefined
+      );
+      console.log("Frontend Response:", response);
+      if (response.success) {
+        const newCourses = response.courses || [];
+        const newCategories = response.category || [];
+        setCourses([...newCourses]);
+        setCategories([...newCategories]);
+        setTotalCourses(response.total || 0); // Use actual total
+        console.log("Total Courses Set:", response.total, "Total Pages:", Math.ceil(response.total / limit));
+
+        const counts: { [key: string]: number } = { all: response.total || 0 };
+        newCourses.forEach((course: ICourse) => {
+          const catId =
+            typeof course.category === "object" && course.category?._id
+              ? course.category._id
+              : course.category?.toString();
+          if (catId) counts[catId] = (counts[catId] || 0) + 1;
+        });
+        setCategoryCounts(counts);
+
+        console.log("State Updated:", {
+          courses: newCourses.length,
+          categories: newCategories.length,
+          totalCourses: response.total,
+          totalPages: Math.ceil(response.total / limit),
+          selectedLanguageId,
+          searchBar,
+          selectedCategory,
+          sortBy,
+        });
+      } else {
+        setCourses([]);
+        setCategories([]);
+        setTotalCourses(0);
+        setCategoryCounts({ all: 0 });
+        setError(response.message || "No courses found for this language");
+        console.log("Fetch failed, totalCourses set to 0");
+      }
+    } catch (error) {
+      console.error("Fetch courses error:", error);
+      setError("Failed to load courses. Please try again.");
       setTotalCourses(0);
-      setCategoryCounts({ all: 0 });
-      setError(response.message || "No courses found for this language");
-      console.log("Fetch failed, totalCourses set to 0");
+      console.log("Error occurred, totalCourses set to 0");
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    console.error("Fetch courses error:", error);
-    setError("Failed to load courses. Please try again.");
-    setTotalCourses(0);
-    console.log("Error occurred, totalCourses set to 0");
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const handlePageChange = (page: number) => {
     if (page >= 1 && page <= totalPages) {
@@ -137,6 +136,21 @@ const Course: React.FC = () => {
     } else {
       navigate(`/courseDetail/${courseId}`);
     }
+  };
+
+  const renderStars = (rating: string) => {
+    const ratingValue = parseFloat(rating) || 0;
+    return (
+      <div className="flex items-center space-x-1">
+        {[...Array(5)].map((_, i) => (
+          <Star
+            key={i}
+            className={`h-4 w-4 ${i < Math.floor(ratingValue) ? "fill-amber-400 text-amber-400" : i < ratingValue ? "fill-amber-400/50 text-amber-400/50" : "fill-muted text-muted"}`}
+          />
+        ))}
+        <span className="text-xs text-muted-foreground ml-1">({rating})</span>
+      </div>
+    );
   };
 
   return (
@@ -230,6 +244,7 @@ const Course: React.FC = () => {
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {courses.map((course) => {
+                console.log("Rendering course:", course)
                 const isEnrolled = enrolledCourses.has(course._id);
                 return (
                   <Card key={course._id} className="group overflow-hidden hover:shadow-lg border-muted/60">
@@ -282,16 +297,9 @@ const Course: React.FC = () => {
                         )}
                       </div>
                       <div className="flex justify-between items-center">
-                        <div className="flex items-center space-x-1">
-                          <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-                          <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-                          <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-                          <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-                          <Star className="h-4 w-4 fill-muted text-muted" />
-                          <span className="text-xs text-muted-foreground ml-1">(4.0)</span>
-                        </div>
+                        {renderStars(course.averageRating || "0.0")}
                         <Badge variant="outline" className="bg-primary/5 text-primary">
-                          {course.buyCount?.toLocaleString() || 0} students
+                          {course.ratingCount || 0} reviews
                         </Badge>
                       </div>
                     </CardContent>

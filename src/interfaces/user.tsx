@@ -6,7 +6,7 @@ export default interface Student {
     id: any;
     success: any;
     _id?: string;
-    name?: string;
+    name: string;
     email?: string;
     mobile?: string;
     password?: string;
@@ -58,6 +58,8 @@ export interface ICourse {
   lessons?: ILessonPreview[];
   enrolledStudents?: string[];
   tutor?: Tutor | undefined;
+  averageRating?: string; 
+  ratingCount?: number;
   createdAt?: Date;
   updatedAt?: Date;
 }

@@ -4,7 +4,7 @@ import { useSelector } from "react-redux";
 import { RootState } from "../../../redux/store";
 import { Card, CardContent, CardHeader } from "../../UI/card";
 import { Button } from "../../UI/Button";
-import { IEnrolledCourse } from "../../../interfaces/user";
+import { IEnrolledCourse, IReview } from "../../../interfaces/user";
 import { getEnrolledCourses, cancelEnrollment, submitCourseReview, updateCourseReview, deleteCourseReview } from "../../../services/userAuth";
 import { toast } from "react-toastify";
 import { format, differenceInDays } from "date-fns";
@@ -23,6 +23,8 @@ const EnrolledCourses: React.FC = () => {
   const [showReviewModal, setShowReviewModal] = useState<string | null>(null);
   const [showCompletionModal, setShowCompletionModal] = useState<string | null>(null);
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState<string | null>(null);
+  const [showReviewsModal, setShowReviewsModal] = useState<string | null>(null);
+  const [courseReviews, setCourseReviews] = useState<IReview[]>([]);
   const [rating, setRating] = useState<number>(0);
   const [reviewText, setReviewText] = useState<string>("");
   const [isEditingReview, setIsEditingReview] = useState<boolean>(false);
@@ -91,11 +93,9 @@ const EnrolledCourses: React.FC = () => {
       return;
     }
     
-    const progress = course.totalLessons > 0 ? (Number(course.completedLessons) / Number(course.totalLessons)) * 100 : (course.isCompleted || course.status === 'completed' ? 100 : 0);
-    const isFullyCompleted = progress === 100 || course.isCompleted || course.status === 'completed';
-    
-    if (isFullyCompleted) {
-      toast.error("Cannot cancel: Course is 100% completed");
+    const fullyCompleted = isFullyCompleted(course);
+    if (fullyCompleted) {
+      toast.error("Cannot cancel: Course is fully completed");
       return;
     }
     if (!isCancelEligible(course.enrolledDate)) {
@@ -170,25 +170,32 @@ const EnrolledCourses: React.FC = () => {
     }
   };
 
+  const isFullyCompleted = (course: IEnrolledCourse): boolean => {
+    if (course.totalLessons === 0 && course.completedLessons > 0) {
+      console.warn(`Inconsistent data for course ${course._id}: completedLessons=${course.completedLessons}, totalLessons=${course.totalLessons}`);
+      return true; 
+    }
+    const fullyCompleted = course.totalLessons > 0 ? course.completedLessons === course.totalLessons : false;
+    console.log(`isFullyCompleted check for course ${course._id}:`, {
+      completedLessons: course.completedLessons,
+      totalLessons: course.totalLessons,
+      fullyCompleted,
+    });
+    return fullyCompleted;
+  };
+
   const isCancelButtonDisabled = (course: IEnrolledCourse): boolean => {
-    const progress = course.totalLessons > 0 
-      ? (Number(course.completedLessons) / Number(course.totalLessons)) * 100 
-      : (course.isCompleted || course.status === 'completed' ? 100 : 0);
-    
-    const isFullyCompleted = progress === 100 || course.isCompleted || course.status === 'completed';
-    
+    const fullyCompleted = isFullyCompleted(course);
     const disabled = (
-      course.status === "Cancelled" ||
-      isFullyCompleted ||
-      !isCancelEligible(course.enrolledDate) ||
-      cancelling === course._id
+      course.status === "Cancelled" || // Disable if already cancelled
+      fullyCompleted || // Disable if fully completed
+      !isCancelEligible(course.enrolledDate) || // Disable if not eligible for cancellation
+      cancelling === course._id // Disable if currently cancelling
     );
     
     console.log(`Cancel button disabled check for course ${course._id}:`, {
       status: course.status,
-      isCompleted: course.isCompleted,
-      progress: progress,
-      isFullyCompleted: isFullyCompleted,
+      fullyCompleted,
       cancelEligible: isCancelEligible(course.enrolledDate),
       isCancelling: cancelling === course._id,
       disabled,
@@ -201,9 +208,8 @@ const EnrolledCourses: React.FC = () => {
     if (course.status === "Cancelled") {
       return "Course is already cancelled";
     }
-    const progress = course.totalLessons > 0 ? (Number(course.completedLessons) / Number(course.totalLessons)) * 100 : (course.isCompleted || course.status === 'completed' ? 100 : 0);
-    if (progress === 100 || course.isCompleted || course.status === 'completed') {
-      return "Cannot cancel: Course is 100% completed";
+    if (isFullyCompleted(course)) {
+      return "Cannot cancel: All lessons completed";
     }
     if (!isCancelEligible(course.enrolledDate)) {
       return "Refund period has expired (7 days)";
@@ -332,6 +338,21 @@ const EnrolledCourses: React.FC = () => {
     }
   };
 
+  // const handleShowReviews = async (courseId: string) => {
+  //   try {
+  //     const response = await listReviews(courseId);
+  //     if (response.success) {
+  //       setCourseReviews(response.reviews);
+  //       setShowReviewsModal(courseId);
+  //     } else {
+  //       toast.error(response.message || "Failed to load reviews");
+  //     }
+  //   } catch (err: any) {
+  //     console.error("Error fetching reviews:", err);
+  //     toast.error("Failed to load reviews");
+  //   }
+  // };
+
   if (loading) {
     return (
       <div className="min-h-screen flex justify-center items-center bg-[#E8D7D7]">
@@ -367,8 +388,7 @@ const EnrolledCourses: React.FC = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {enrolledCourses.map((course) => {
-              const progress = course.totalLessons > 0 ? (Number(course.completedLessons) / Number(course.totalLessons)) * 100 : (course.isCompleted || course.status === 'completed' ? 100 : 0);
-              const isFullyCompleted = progress === 100 || course.isCompleted || course.status === 'completed';
+              const fullyCompleted = isFullyCompleted(course);
               
               return (
                 <Card key={course._id} className="hover:shadow-lg transition-shadow">
@@ -389,28 +409,6 @@ const EnrolledCourses: React.FC = () => {
                         </div>
                       )}
                     </div>
-                    
-                    <div className="bg-gray-100 p-3 rounded-md">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-sm font-medium text-gray-700">Progress</span>
-                        <span className="text-sm text-gray-600">{course.completedLessons}/{course.totalLessons} lessons</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div 
-                          className={`h-2 rounded-full transition-all duration-300 ${
-                            isFullyCompleted ? 'bg-green-500' : 'bg-blue-500'
-                          }`}
-                          style={{ width: `${Math.min(progress, 100)}%` }}
-                        ></div>
-                      </div>
-                      <div className="flex justify-between items-center mt-1">
-                        <span className="text-xs text-gray-500">{Math.round(progress)}% Complete</span>
-                        {isFullyCompleted && (
-                          <span className="text-xs text-green-600 font-medium">✅ Completed</span>
-                        )}
-                      </div>
-                    </div>
-
                     <div className="flex items-center space-x-3 mb-3">
                       {course.tutor && course.tutor.name && course.tutor._id ? (
                         <>
@@ -456,7 +454,7 @@ const EnrolledCourses: React.FC = () => {
                         <strong>Enrolled Date:</strong>{" "}
                         {course.enrolledDate ? format(new Date(course.enrolledDate), "PPP 'at' p") : "Unknown"}
                       </p>
-                      {isFullyCompleted && (
+                      {fullyCompleted && (
                         <p className="text-green-500 font-medium">✅ Course Completed</p>
                       )}
                       {course.status === "Cancelled" && (
@@ -503,8 +501,8 @@ const EnrolledCourses: React.FC = () => {
                       )}
                       {isCancelButtonDisabled(course) && course.status !== "Cancelled" && (
                         <p className="text-red-500 text-xs">
-                          {isFullyCompleted
-                            ? "✅ Course is 100% completed - Cancellation not available"
+                          {fullyCompleted
+                            ? "✅ Course is completed - Cancellation not available"
                             : !isCancelEligible(course.enrolledDate)
                               ? "⏰ Refund period expired (7 days)"
                               : "Cancellation not available"}
@@ -531,11 +529,17 @@ const EnrolledCourses: React.FC = () => {
                       <Button
                         onClick={() => handleReviewAndRating(course._id)}
                         className="w-full bg-green-500 hover:bg-green-600"
-                        disabled={!isFullyCompleted}
-                        title={!isFullyCompleted ? "Complete all lessons to review" : ""}
+                        disabled={!fullyCompleted}
+                        title={!fullyCompleted ? "Complete all lessons to review" : ""}
                       >
                         {course.review ? "Edit Review" : "Review & Rate"}
                       </Button>
+                      {/* <Button
+                        onClick={() => handleShowReviews(course._id)}
+                        className="w-full bg-blue-500 hover:bg-blue-600"
+                      >
+                        Show Reviews
+                      </Button> */}
                     </div>
                   </CardContent>
                 </Card>
@@ -637,6 +641,52 @@ const EnrolledCourses: React.FC = () => {
                   Cancel
                 </Button>
               </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {showReviewsModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <Card className="max-w-lg w-full max-h-[80vh] overflow-y-auto">
+            <CardHeader>
+              <h2 className="text-xl font-semibold text-primary">
+                Reviews for {enrolledCourses.find((c) => c._id === showReviewsModal)?.courseTitle}
+              </h2>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {courseReviews.length === 0 ? (
+                <p className="text-gray-700">No reviews available for this course.</p>
+              ) : (
+                courseReviews.map((review) => (
+                  <div key={review._id} className="border-b pb-4 mb-4">
+                    <div className="flex items-center space-x-1">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <span
+                          key={star}
+                          className={`text-lg ${review.rating >= star ? "text-yellow-400" : "text-gray-300"}`}
+                        >
+                          ★
+                        </span>
+                      ))}
+                      <span className="text-sm text-gray-600 ml-2">({review.rating}/5)</span>
+                    </div>
+                    <p className="text-sm text-gray-600 mt-1 italic">"{review.comment}"</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Posted on {review.createdAt ? format(new Date(review.createdAt), "PPP") : "Unknown"}
+                    </p>
+                  </div>
+                ))
+              )}
+              <Button
+                onClick={() => {
+                  setShowReviewsModal(null);
+                  setCourseReviews([]);
+                }}
+                className="w-full bg-gray-500 hover:bg-gray-600"
+              >
+                Close
+              </Button>
             </CardContent>
           </Card>
         </div>

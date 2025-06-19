@@ -21,6 +21,7 @@ const Lessons: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [completedLessons, setCompletedLessons] = useState<string[]>([]);
   const [completingLesson, setCompletingLesson] = useState<string | null>(null);
+  const [markingCourseComplete, setMarkingCourseComplete] = useState<boolean>(false);
 
   useEffect(() => {
     if (!courseId) {
@@ -59,7 +60,7 @@ const Lessons: React.FC = () => {
     try {
       const response = await listLessons(courseId);
       if (response.success && Array.isArray(response.lessons)) {
-        console.log("Lessons fetched:", response.lessons.length);
+        console.log("Lessons fetched:", response.lessons);
         setLessons(response.lessons);
       } else {
         setError("No lessons found for this course");
@@ -73,58 +74,71 @@ const Lessons: React.FC = () => {
   };
 
   const handleCompleteLesson = async (lessonId: string) => {
-  if (!courseId || !user?._id || !lessonId) {
-    toast.error("Missing required information");
-    return;
-  }
-
-  console.log(`Completing lesson: courseId=${courseId}, lessonId=${lessonId}, userId=${user._id}`);
-
-  if (completedLessons.includes(lessonId)) {
-    toast.info("Lesson already completed");
-    return;
-  }
-
-  setCompletingLesson(lessonId);
-  
-  try {
-    const response = await completeLesson(courseId, lessonId);
-    if (response.success) {
-      const updatedCompleted = [...completedLessons, lessonId];
-      setCompletedLessons(updatedCompleted);
-      toast.success("Lesson completed successfully!");
-
-      // Check if all lessons are completed
-      if (updatedCompleted.length === lessons.length && lessons.length > 0) {
-  try {
-    console.log(`Marking course as completed: courseId=${courseId}`);
-    const completionResponse = await markCourseCompleted(courseId);
-    if (completionResponse.success) {
-      toast.success("🎉 Congratulations! Course completed!");
-      navigate("/enrolled-courses", { state: { refresh: true, timestamp: Date.now() } });
-    } else {
-      console.error("Failed to mark course as completed:", completionResponse.message);
-      toast.error(completionResponse.message || "Failed to mark course as completed");
-      navigate("/enrolled-courses", { state: { refresh: true, timestamp: Date.now() } });
+    if (!courseId || !user?._id || !lessonId) {
+      toast.error("Missing required information");
+      return;
     }
-  } catch (error) {
-    console.error("Error marking course as completed:", error);
-    toast.error("Failed to mark course as completed");
-    navigate("/enrolled-courses", { state: { refresh: true, timestamp: Date.now() } });
-  }
-} else {
-        navigate("/enrolled-courses", { state: { refresh: true, timestamp: Date.now() } });
+
+    const lessonExists = lessons.some(lesson => lesson._id === lessonId);
+    if (!lessonExists) {
+      toast.error("Lesson not found in this course");
+      return;
+    }
+
+    console.log(`Completing lesson: courseId=${courseId}, lessonId=${lessonId}, userId=${user._id}`);
+
+    if (completedLessons.includes(lessonId)) {
+      toast.info("Lesson already completed");
+      return;
+    }
+
+    setCompletingLesson(lessonId);
+    
+    try {
+      const response = await completeLesson(courseId, lessonId);
+      if (response.success) {
+        const updatedCompleted = [...completedLessons, lessonId];
+        setCompletedLessons(updatedCompleted);
+        toast.success("Lesson completed successfully!");
+
+        const lessonsResponse = await listLessons(courseId);
+        if (lessonsResponse.success && Array.isArray(lessonsResponse.lessons)) {
+          setLessons(lessonsResponse.lessons);
+          console.log("Updated lessons after completion:", lessonsResponse.lessons.length);
+
+          if (updatedCompleted.length === lessonsResponse.lessons.length && lessonsResponse.lessons.length > 0) {
+            try {
+              const completionResponse = await markCourseCompleted(courseId);
+              if (completionResponse.success) {
+                toast.success("🎉 Congratulations! Course completed!");
+                navigate("/enrolled-courses", { state: { refresh: true, timestamp: Date.now() } });
+              } else {
+                console.error("Failed to mark course as completed:", completionResponse.message);
+                toast.error(completionResponse.message || "Failed to mark course as completed");
+                navigate("/enrolled-courses", { state: { refresh: true, timestamp: Date.now() } });
+              }
+            } catch (error) {
+              console.error("Error marking course as completed:", error);
+              toast.error("Failed to mark course as completed");
+              navigate("/enrolled-courses", { state: { refresh: true, timestamp: Date.now() } });
+            }
+          } else {
+            navigate("/enrolled-courses", { state: { refresh: true, timestamp: Date.now() } });
+          }
+        } else {
+          toast.error("Failed to refresh lessons after completion");
+          navigate("/enrolled-courses", { state: { refresh: true, timestamp: Date.now() } });
+        }
+      } else {
+        toast.error(response.message || "Failed to mark lesson as completed");
       }
-    } else {
-      toast.error(response.message || "Failed to mark lesson as completed");
+    } catch (error) {
+      console.error("Error completing lesson:", error);
+      toast.error("Failed to complete lesson");
+    } finally {
+      setCompletingLesson(null);
     }
-  } catch (error) {
-    console.error("Error completing lesson:", error);
-    toast.error("Failed to complete lesson");
-  } finally {
-    setCompletingLesson(null);
-  }
-};
+  };
 
   const isLessonUnlocked = (lessonIndex: number): boolean => {
     if (lessonIndex === 0) return true;
@@ -174,7 +188,6 @@ const Lessons: React.FC = () => {
             ← Back to Enrolled Courses
           </Button>
           <h1 className="text-4xl font-bold text-gray-800 mb-4">Course Lessons</h1>
-          
           <div className="bg-white rounded-lg p-4 shadow-md mb-6">
             <div className="flex justify-between items-center mb-2">
               <span className="text-sm font-medium text-gray-700">Course Progress</span>
@@ -198,8 +211,35 @@ const Lessons: React.FC = () => {
           <Card className="shadow-xl rounded-xl border border-gray-200">
             <CardContent className="p-8 text-center">
               <p className="text-gray-600 font-medium mb-6">
-                No lessons available for this course yet.
+                No lessons available for this course.
               </p>
+              <Button
+                onClick={async () => {
+                  if (!courseId || !user?._id) {
+                    toast.error("Missing required information");
+                    return;
+                  }
+                  setMarkingCourseComplete(true);
+                  try {
+                    const response = await markCourseCompleted(courseId);
+                    if (response.success) {
+                      toast.success("🎉 Course marked as completed!");
+                      navigate("/enrolled-courses", { state: { refresh: true, timestamp: Date.now() } });
+                    } else {
+                      toast.error(response.message || "Failed to mark course as completed");
+                    }
+                  } catch (error) {
+                    console.error("Error marking course as completed:", error);
+                    toast.error("Failed to mark course as completed");
+                  } finally {
+                    setMarkingCourseComplete(false);
+                  }
+                }}
+                className="bg-green-500 hover:bg-green-600 text-white"
+                disabled={markingCourseComplete}
+              >
+                {markingCourseComplete ? "Marking..." : "Mark Course as Complete"}
+              </Button>
             </CardContent>
           </Card>
         ) : (
@@ -237,7 +277,6 @@ const Lessons: React.FC = () => {
                     <p className="text-gray-600 text-sm line-clamp-3">
                       {lesson.description || "No description available"}
                     </p>
-                    
                     {lesson.syllabus && (
                       <div className="mb-2">
                         <p className="text-sm font-medium text-gray-700">Syllabus:</p>
@@ -249,7 +288,6 @@ const Lessons: React.FC = () => {
                         </div>
                       </div>
                     )}
-                    
                     {lesson.videoUrl ? (
                       <div className="relative">
                         <video
@@ -278,7 +316,6 @@ const Lessons: React.FC = () => {
                         <span className="text-gray-500">No Video Available</span>
                       </div>
                     )}
-                    
                     {isUnlocked && lesson.videoUrl && (
                       <Button
                         onClick={() => handleCompleteLesson(lesson._id || '')}
@@ -294,7 +331,6 @@ const Lessons: React.FC = () => {
                         {isCompletingThis ? "Completing..." : isCompleted ? "✅ Completed" : "Mark as Complete"}
                       </Button>
                     )}
-                    
                     {!isUnlocked && (
                       <div className="text-center text-gray-500 text-sm py-2">
                         Complete lesson {index} to unlock this lesson
@@ -306,7 +342,6 @@ const Lessons: React.FC = () => {
             })}
           </div>
         )}
-        
         {lessons.length > 0 && completedLessons.length === lessons.length && (
           <div className="mt-8 text-center">
             <Card className="bg-green-100 border-green-500">
@@ -314,7 +349,7 @@ const Lessons: React.FC = () => {
                 <h2 className="text-2xl font-bold text-green-800 mb-2">🎉 Congratulations!</h2>
                 <p className="text-green-700">You have completed all lessons in this course!</p>
                 <Button
-                  onClick={() => navigate("/enrolled-courses", { state: { refresh: true } })}
+                  onClick={() => navigate("/enrolled-courses", { state: { refresh: true, timestamp: Date.now() } })}
                   className="mt-4 bg-green-600 hover:bg-green-700 text-white"
                 >
                   View All Courses

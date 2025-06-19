@@ -14,6 +14,7 @@ import Layouts from "../../Pages/Tutor/Layouts";
 import EditLessons from "../../Pages/Tutor/lesson/EditLessons";
 import PathProtect from "../../components/Protector/TutorProtector/PathProtector";
 import TutorChatPage from "../../Pages/Tutor/ChatPage";
+import EnrolledStudent from "../../Pages/Tutor/course/EnrolledStudent";
 
 function TutorRoute() {
     return (
@@ -40,6 +41,7 @@ function TutorRoute() {
                     <Route path="/listLesson/:courseId" element={<ListLessons />} />
                     <Route path='/editCourse/:courseId' element={<EditCourses />} />
                     <Route path="/chatPage" element={<TutorChatPage />} />
+                    <Route path="/enrolled-students" element={<EnrolledStudent />} />
                 </Route>
             </Route>
         </Routes>

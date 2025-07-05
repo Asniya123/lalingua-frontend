@@ -8,7 +8,7 @@ import type { ICourse } from "../../../interfaces/tutor";
 import { Button } from "../../UI/Button";
 import { Card, CardContent, CardFooter } from "../../UI/card";
 import { Separator } from "../../UI/Separator";
-import { Pencil, Trash2, BookOpen, Plus, Star } from "lucide-react";
+import { Pencil, Trash2, BookOpen, Plus, Star, Users } from "lucide-react"; // Added Users icon
 import SearchBar from "../../UI/SearchBar";
 
 const ListCourse: React.FC = () => {
@@ -25,14 +25,14 @@ const ListCourse: React.FC = () => {
     fetchCourses();
   }, [currentPage]);
 
- useEffect(() => {
+  useEffect(() => {
     const timeoutId = setTimeout(() => {
       if (currentPage !== 1) {
-        setCurrentPage(1); 
+        setCurrentPage(1);
       } else {
-        fetchCourses(); 
+        fetchCourses();
       }
-    }, 300); 
+    }, 300);
 
     return () => clearTimeout(timeoutId);
   }, [searchTerm]);
@@ -46,14 +46,13 @@ const ListCourse: React.FC = () => {
       setCourses(result.courses);
       setTotalCourses(result.total);
     } catch (error) {
-      console.log('=================', error)
+      console.log("=================", error);
       const axiosError = error as AxiosError<{ message?: string }>;
+      setError(axiosError.response?.data?.message || "Failed to fetch courses");
     } finally {
       setLoading(false);
     }
   };
-
-
 
   const handleEdit = (courseId: string, course: ICourse) => {
     if (!courseId) {
@@ -72,7 +71,7 @@ const ListCourse: React.FC = () => {
     try {
       const result = await deleteCourse(courseId);
       toast.success(result.message);
-      fetchCourses(); 
+      fetchCourses();
     } catch (error) {
       const axiosError = error as AxiosError<{ message?: string }>;
       toast.error(axiosError.response?.data?.message || "Failed to delete course");
@@ -89,14 +88,14 @@ const ListCourse: React.FC = () => {
     navigate(`/tutor/listLesson/${courseId}`);
   };
 
+
+  
+
   const totalPage = Math.ceil(totalCourses / itemsPerPage);
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
- 
   };
-
-
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50">
@@ -106,9 +105,7 @@ const ListCourse: React.FC = () => {
           <div className="bg-gradient-to-r from-[#1593A0] via-[#1CA6B3] to-[#20BCD1] rounded-2xl p-8 shadow-xl">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <div>
-                <h1 className="text-4xl font-bold text-white mb-2">
-                  My Courses
-                </h1>
+                <h1 className="text-4xl font-bold text-white mb-2">My Courses</h1>
                 <p className="text-purple-100 text-lg">
                   Create, manage and inspire with your educational content
                 </p>
@@ -119,8 +116,8 @@ const ListCourse: React.FC = () => {
                   </div>
                 </div>
               </div>
-              <Button 
-                onClick={() => navigate("/tutor/addCourse")} 
+              <Button
+                onClick={() => navigate("/tutor/addCourse")}
                 className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold px-6 py-3 rounded-xl shadow-lg transform hover:scale-105 transition-all duration-200"
               >
                 <Plus className="mr-2 h-5 w-5" />
@@ -128,10 +125,7 @@ const ListCourse: React.FC = () => {
               </Button>
             </div>
 
-            <SearchBar
-              onSearch={setSearchTerm}
-              placeholder="Search courses by name..."
-            />
+            <SearchBar onSearch={setSearchTerm} placeholder="Search courses by name..." />
           </div>
         </div>
 
@@ -261,7 +255,7 @@ const ListCourse: React.FC = () => {
                     <Separator className="bg-gradient-to-r from-purple-200 via-pink-200 to-orange-200" />
 
                     <CardFooter className="p-6 bg-gradient-to-r from-gray-50 to-blue-50">
-                      <div className="flex justify-between items-center w-full">
+                      <div className="flex justify-between items-center w-full flex-wrap gap-2">
                         <div className="flex space-x-2">
                           <Button
                             variant="outline"
@@ -282,14 +276,17 @@ const ListCourse: React.FC = () => {
                             Delete
                           </Button>
                         </div>
-                        <Button
-                          size="sm"
-                          onClick={() => handleLessons(course._id || "")}
-                          className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-medium shadow-md"
-                        >
-                          <BookOpen className="h-4 w-4 mr-1" />
-                          Lessons
-                        </Button>
+                        <div className="flex space-x-2">
+                          <Button
+                            size="sm"
+                            onClick={() => handleLessons(course._id || "")}
+                            className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-medium shadow-md"
+                          >
+                            <BookOpen className="h-4 w-4 mr-1" />
+                            Lessons
+                          </Button>
+                          
+                        </div>
                       </div>
                     </CardFooter>
                   </Card>
@@ -299,39 +296,39 @@ const ListCourse: React.FC = () => {
 
             {/* Pagination */}
             {totalPage > 1 && (
-                      <div className="mt-8 flex justify-center">
-                        <nav className="flex items-center space-x-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handlePageChange(currentPage - 1)}
-                            disabled={currentPage === 1}
-                            className="text-gray-500"
-                          >
-                            Previous
-                          </Button>
-            
-                          {Array.from({ length: totalPage }).map((_, index) => (
-                            <Button
-                              key={index}
-                              variant={currentPage === index + 1 ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => handlePageChange(index + 1)}
-                              className={currentPage === index + 1 ? "bg-primary text-white" : "text-gray-700"}
-                            >
-                              {index + 1}
-                            </Button>
-                          ))}
-            
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handlePageChange(currentPage + 1)}
-                            disabled={currentPage === totalPage}
-                            className="text-gray-500"
-                          >
-                            Next
-                          </Button>
+              <div className="mt-8 flex justify-center">
+                <nav className="flex items-center space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="text-gray-500"
+                  >
+                    Previous
+                  </Button>
+
+                  {Array.from({ length: totalPage }).map((_, index) => (
+                    <Button
+                      key={index}
+                      variant={currentPage === index + 1 ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => handlePageChange(index + 1)}
+                      className={currentPage === index + 1 ? "bg-primary text-white" : "text-gray-700"}
+                    >
+                      {index + 1}
+                    </Button>
+                  ))}
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPage}
+                    className="text-gray-500"
+                  >
+                    Next
+                  </Button>
                 </nav>
               </div>
             )}

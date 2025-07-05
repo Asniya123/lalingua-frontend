@@ -11,6 +11,7 @@ import {
   FaBook,
   FaComments,
   FaSignOutAlt,
+  FaWallet,
 } from 'react-icons/fa';
 
 interface TutorSidebarProps {
@@ -42,6 +43,7 @@ const TutorSidebar: React.FC<TutorSidebarProps> = ({ onNavClick }) => {
     { path: '/tutor/getprofile', label: 'Profile', icon: <FaUser /> },
     { path: '/tutor/listCourse', label: 'Courses', icon: <FaBook /> },
     { path: '/tutor/chatPage', label: 'Chat', icon: <FaComments /> },
+    // { path: '/tutor/wallet', label: 'wallet', icon: <FaWallet /> },
   ];
 
   return (

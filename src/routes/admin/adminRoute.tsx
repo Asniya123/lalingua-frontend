@@ -13,6 +13,7 @@ import ListLanguages from "../../Pages/admin/ListLanguages";
 import EditLanguages from "../../Pages/admin/EditLanguages";
 import CourseManaging from "../../Pages/admin/CourseManging";
 import PathProtect from "../../components/Protector/AdminProtector/PathProtector";
+import WalletsPage from "../../Pages/admin/wallets";
 
 function AdminRoute() {
     return (
@@ -43,6 +44,7 @@ function AdminRoute() {
 
                 {/* Course */}
                 <Route path="/course" element={<CourseManaging />} />
+                <Route path="/wallet" element={<WalletsPage />} />
             </Route>
         </Routes>
     );

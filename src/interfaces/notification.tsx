@@ -4,9 +4,10 @@ export default interface INotification{
     isRead: boolean;
     url: string;
     from: string;
-    fromModel:"User" | "Tutor" | "Admin";
+    fromModel:"User" | "Tutor" ;
     to: string;
-    toModel:"User" | "Tutor" | "Admin";
+    toModel:"User" | "Tutor" ;
     message: string;
-    createdAt: Date;
+     type?: string; 
+  createdAt: string;
   }

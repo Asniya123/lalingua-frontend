@@ -4,6 +4,7 @@ import Student, { ICourse, IEnrolledCourse, ILesson, IReview} from "../interface
 import API from "../api/axiosInstance.js";
 import { Icategory, ILanguage } from "../interfaces/admin.js";
 import { Wallet } from "../interfaces/wallet.js";
+import INotification from "../interfaces/notification.js";
 
 
 const COOKIE_EXPIRY_DAYS = 7;
@@ -524,3 +525,5 @@ export async function getStudentById(studentId: string): Promise<{ success: bool
     };
   }
 }
+
+

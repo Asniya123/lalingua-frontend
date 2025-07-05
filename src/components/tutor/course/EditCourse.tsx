@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getCourse, editCourse } from "../../../services/tutorAuth";
-import { listCategories } from "../../../services/adminAuth"; 
+import { listCategories } from "../../../services/adminAuth";
 import { AxiosError } from "axios";
 import { toast } from "react-toastify";
-import { ICourse } from "../../../interfaces/tutor";
-import TutorSidebar from "../../layouts/tutorHeader";
 import ImageUpload from "../../../utils/Cloudinary";
 
 interface Category {
@@ -17,15 +15,21 @@ interface Category {
 const EditCourse: React.FC = () => {
   const { courseId } = useParams<{ courseId: string }>();
   const navigate = useNavigate();
-  const [formData, setFormData] = useState<Partial<ICourse>>({
+  const [formData, setFormData] = useState<{
+    courseTitle?: string;
+    description?: string;
+    regularPrice?: number;
+    imageUrl?: string;
+    category?: string;
+  }>({
     courseTitle: "",
     description: "",
     regularPrice: 0,
     imageUrl: "",
     category: "",
   });
-  const [newImageFile, setNewImageFile] = useState<File | null>(null); // For new image upload
-  const [categories, setCategories] = useState<Category[]>([]); // Store categories
+  const [newImageFile, setNewImageFile] = useState<File | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -36,13 +40,12 @@ const EditCourse: React.FC = () => {
       return;
     }
     fetchCourseDetails(courseId);
-    fetchCategories(); // Fetch categories on mount
+    fetchCategories();
   }, [courseId, navigate]);
 
   const fetchCourseDetails = async (id: string) => {
     setLoading(true);
     try {
-      console.log("course id", id);
       const course = await getCourse(id);
       setFormData({
         courseTitle: course.courseTitle || "",
@@ -91,7 +94,6 @@ const EditCourse: React.FC = () => {
         return;
       }
       if (file.size > 5 * 1024 * 1024) {
-        // 5MB limit
         setError("Image file size must be less than 5MB");
         return;
       }
@@ -139,7 +141,6 @@ const EditCourse: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col">
       <div className="flex-1 flex p-6">
-        
         <div className="flex-1 px-4">
           <div className="bg-white shadow-md rounded-lg p-4">
             <h1 className="text-2xl font-semibold mb-4">Edit Course</h1>

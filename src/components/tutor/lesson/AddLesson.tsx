@@ -82,59 +82,59 @@ const AddLesson: React.FC = () => {
   };
 
   const handleSubmit = async (values: FormValues, { setSubmitting }: any) => {
-    if (!courseId) {
-      toast.error("Invalid course ID");
-      setSubmitting(false);
-      return;
+  if (!courseId) {
+    toast.error("Invalid course ID");
+    setSubmitting(false);
+    return;
+  }
+
+  setLoading(true);
+  setIsCancelled(false);
+
+  try {
+    const uploadVideo = async (file: File, type: "intro" | "lesson") => {
+      return await VideoUpload(file, (progress) => {
+        if (isCancelled) throw new Error("Upload cancelled");
+        setProgress((prev) => ({ ...prev, [type]: progress }));
+      });
+    };
+
+    const [introVideoUrl, videoUrl] = await Promise.all([
+      uploadVideo(values.introVideoFile!, "intro"),
+      uploadVideo(values.videoFile!, "lesson"),
+    ]);
+
+    if (!introVideoUrl || !videoUrl) throw new Error("Video upload failed.");
+
+    const lessonData: ILesson = {
+      courseId,
+      title: values.title,
+      description: values.description,
+      videoUrl,
+      introVideoUrl,
+      syllabus: values.syllabus, // Ensure syllabus is included
+    };
+
+    const result = await addLesson(lessonData);
+
+    if (result.success) {
+      toast.success(result.message);
+      navigate(`/tutor/listLesson/${courseId}`);
+    } else {
+      throw new Error(result.message || "Failed to add lesson");
     }
-
-    setLoading(true);
-    setIsCancelled(false);
-
-    try {
-      const uploadVideo = async (file: File, type: "intro" | "lesson") => {
-        return await VideoUpload(file, (progress) => {
-          if (isCancelled) throw new Error("Upload cancelled");
-          setProgress((prev) => ({ ...prev, [type]: progress }));
-        });
-      };
-
-      const [introVideoUrl, videoUrl] = await Promise.all([
-        uploadVideo(values.introVideoFile!, "intro"),
-        uploadVideo(values.videoFile!, "lesson"),
-      ]);
-
-      if (!introVideoUrl || !videoUrl) throw new Error("Video upload failed.");
-
-      const lessonData: ILesson = {
-        courseId,
-        title: values.title,
-        description: values.description,
-        videoUrl,
-        introVideoUrl,
-        syllabus: values.syllabus,
-      };
-
-      const result = await addLesson(lessonData);
-
-      if (result.success) {
-        toast.success(result.message);
-        navigate(`/tutor/listLesson/${courseId}`);
-      } else {
-        throw new Error(result.message || "Failed to add lesson");
-      }
-    } catch (error) {
-      if (isCancelled) {
-        toast.info("Upload cancelled.");
-      } else {
-        const axiosError = error as AxiosError<{ error?: string }>;
-        toast.error(axiosError.response?.data?.error || "Failed to add lesson");
-      }
-    } finally {
-      setLoading(false);
-      setSubmitting(false);
+  } catch (error) {
+    if (isCancelled) {
+      toast.info("Upload cancelled.");
+    } else {
+      const axiosError = error as AxiosError<{ error?: string }>;
+      toast.error(axiosError.response?.data?.error || "Failed to add lesson");
     }
-  };
+  } finally {
+    setLoading(false);
+    setSubmitting(false);
+  }
+};
 
   const handleCancel = () => {
     setIsCancelled(true);

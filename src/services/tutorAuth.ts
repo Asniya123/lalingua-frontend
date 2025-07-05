@@ -1,8 +1,9 @@
 import axios, { Axios, AxiosError } from "axios";
-import Tutor, { ICourse, IEnrolledStudent, ILesson } from "../interfaces/tutor.js";
+import Tutor, { ICourse,  IEnrolledStudent, IEnrolledStudentsResponse, ILesson, Wallet } from "../interfaces/tutor.js";
 import tutorAPI from "../api/tutorInstance.js";
 import Cookies from "js-cookie";
 import API from "../api/axiosInstance.js";
+import INotification from "../interfaces/notification.js";
 
 
 interface CourseListResponse {
@@ -236,11 +237,11 @@ export async function addLesson(
   lessonData: ILesson
 ): Promise<{ success: boolean; message: string; lesson?: ILesson }> {
   try {
-    const { courseId, title, description, videoUrl, introVideoUrl } = lessonData;
+    const { courseId, title, description, videoUrl, introVideoUrl, syllabus } = lessonData;
 
-   
-    if (!courseId || !title || !description || !videoUrl) {
-      throw new Error("All lesson fields (courseId, title, description, videoUrl) are required");
+    // Validate all required fields
+    if (!courseId || !title || !description || !videoUrl || !introVideoUrl || !syllabus) {
+      throw new Error("All lesson fields (courseId, title, description, videoUrl, introVideoUrl, syllabus) are required");
     }
 
     const payload: ILesson = {
@@ -248,12 +249,9 @@ export async function addLesson(
       title,
       description,
       videoUrl,
+      introVideoUrl,
+      syllabus, // Include syllabus in the payload
     };
-
-    
-    if (introVideoUrl) {
-      payload.introVideoUrl = introVideoUrl;
-    }
 
     const response = await tutorAPI.post(
       `/addLesson/${courseId}`,
@@ -360,76 +358,109 @@ export async function deleteLesson(
 }
 
 
-//Enrolled Students
 
-interface EnrolledStudent {
-  student: {
-    _id: string;
-    name: string;
-    profilePicture?: string;
-  };
-  course: {
-    _id: string;
-    courseTitle: string;
-  };
-}
 
-export async function getEnrolledStudents(tutorId: string, token: string): Promise<{
+//Wallet
+
+export async function getTutorWallet(tutorId: string): Promise<{
   success: boolean;
   message: string;
-  enrolledStudents: EnrolledStudent[];
-  total: number;
+  wallet?: Wallet;
 }> {
   try {
-    const response = await tutorAPI.get(`/${tutorId}/enrolled-students`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const response = await tutorAPI.get(`/wallet/${tutorId}`, {
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+  console.log("Wallet fetched successfully:", response.data);
     return {
       success: true,
-      message: 'Enrolled students retrieved successfully',
-      enrolledStudents: response.data.enrolledStudents || [],
-      total: response.data.total || response.data.enrolledStudents?.length || 0,
+      message: response.data.message || "Wallet retrieved successfully",
+      wallet: response.data.wallet, // Ensure the API returns { balance, transactions }
     };
   } catch (error) {
     const axiosError = error as AxiosError<{ message?: string }>;
-    console.error('Error fetching enrolled students:', axiosError.response?.data || axiosError.message);
-    const errorMessage = axiosError.response?.data?.message || 'Failed to fetch enrolled students';
-    if (axiosError.response?.status === 401 && errorMessage.includes('blocked')) {
-      throw new Error('tutor is blocked');
-    }
-    throw new Error(errorMessage);
+    console.error("Error fetching tutor wallet:", axiosError.response?.data || axiosError.message);
+    return {
+      success: false,
+      message: axiosError.response?.data?.message || "Failed to fetch wallet",
+    };
   }
 }
 
 
-//EnrolledStudents
 
-export const getEnrolledStudentsByTutor = async (): Promise<{
-  success: boolean;
-  enrolledStudents: IEnrolledStudent[];
-  total: number;
-  message?: string;
-}> => {
+//Dashboard
+
+export async function listEnrolledStudents(tutorId: string, courseId?: string): Promise<IEnrolledStudentsResponse> {
   try {
-    console.log("Calling API to fetch enrolled students");
-    const response = await tutorAPI.get("/enrolled-students");
-    console.log("API Response Data:", response.data);
+    if (!tutorId) {
+      throw new Error('Tutor ID is required');
+    }
+
+    const params: { tutorId: string; courseId?: string } = { tutorId };
+    if (courseId) {
+      params.courseId = courseId;
+    }
+
+    console.log('Frontend service: Making API call with params:', params);
+    const response = await tutorAPI.get('/enrolledStudents', { params });
+
+    console.log('Frontend service: Full API response:', response.data);
+
+    if (!response.data) {
+      console.error('Frontend service: Empty response data');
+      throw new Error('Empty response from server');
+    }
+
+    const studentsData = response.data.students || [];
+
+    if (!Array.isArray(studentsData)) {
+      console.error('Frontend service: Students data is not an array:', studentsData);
+      throw new Error('Invalid students data format');
+    }
+
+    const formattedStudents: IEnrolledStudent[] = studentsData.map((student: any, index: number) => {
+      console.log(`Frontend service: Formatting student ${index + 1}:`, student);
+      return {
+        id: student.id || student._id?.toString() || `student-${index}`,
+        name: student.name || 'Unknown Student',
+        courseId: student.courseId?.toString() || '',
+        enrolledDate: student.enrolledDate || new Date().toISOString(),
+        progress: typeof student.progress === 'number' ? student.progress : 0,
+        review: student.review
+          ? {
+              _id: student.review._id || `review-${index}`,
+              studentId: student.review.studentId || student.id,
+              studentName: student.review.studentName || student.name || 'Anonymous',
+              rating: Number(student.review.rating) || 0,
+              comment: student.review.comment || '',
+              date: student.review.date || new Date().toISOString(),
+            }
+          : undefined,
+      };
+    });
+
+    console.log(`Frontend service: Final formatted students (${formattedStudents.length} items):`, formattedStudents);
+
     return {
       success: true,
-      enrolledStudents: response.data.enrolledStudents || [],
-      total: response.data.total || 0,
+      message: `Enrolled students retrieved successfully - ${formattedStudents.length} students found`,
+      students: formattedStudents,
     };
-  } catch (error: any) {
-    console.error("Error fetching enrolled students:", {
-      status: error.response?.status,
-      data: error.response?.data,
-      message: error.message,
+  } catch (error) {
+    const axiosError = error as AxiosError<{ message?: string }>;
+    console.error('Frontend service: Detailed error:', {
+      message: axiosError.message,
+      status: axiosError.response?.status,
+      data: axiosError.response?.data,
+      config: {
+        url: axiosError.config?.url,
+        method: axiosError.config?.method,
+        params: axiosError.config?.params,
+      },
     });
-    return {
-      success: false,
-      enrolledStudents: [],
-      total: 0,
-      message: error.response?.data?.message || "Failed to fetch enrolled students",
-    };
+    throw new Error(axiosError.response?.data?.message || 'Failed to fetch enrolled students');
   }
-};
+}

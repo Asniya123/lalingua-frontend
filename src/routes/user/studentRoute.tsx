@@ -18,6 +18,7 @@ import RequireLanguage from "../../components/student/RequireLanguage";
 import TutorDetails from "../../Pages/User/TutorDetails";
 import Wallets from "../../Pages/User/wallets";
 import ChatPage from "../../Pages/User/Chat";
+import UserNotification from "../../components/student/chat/Notification";
 
 const StudentRoute = () => {
   return (
@@ -51,6 +52,7 @@ const StudentRoute = () => {
             <Route path="/tutorDetail/:id" element={<TutorDetails />} />
             <Route path="/wallet" element={<Wallets />} />
             <Route path="/chat/:roomId?" element={<ChatPage />} />
+            <Route path="/notification" element={<UserNotification />} />
           </Route>
         </Route>
       </Route>

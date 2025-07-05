@@ -1,14 +1,11 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { Globe, User, ChevronDown, Bell } from "lucide-react";
+import { Globe, User, ChevronDown } from "lucide-react";
 import { useState, useEffect } from "react";
 import Cookies from "js-cookie";
 import { useDispatch, useSelector } from "react-redux";
 import { clearStudent } from "../../redux/slice/studentSlice";
-import { Badge } from "@nextui-org/react";
-import INotification from "../../interfaces/notification";
-import axios from "axios";
-import Notifications from "../notification/Notification";
 import { RootState } from "../../redux/store";
+import UserNotificationComponent from "../../components/student/chat/Notification";
 
 const navigation = [
   { name: "Home", href: "/" },
@@ -25,9 +22,6 @@ export function UserHeader() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isGoogleSignIn, setIsGoogleSignIn] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [notificationDropdownOpen, setNotificationDropdownOpen] = useState(false);
-  const [notifications, setNotifications] = useState<INotification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
 
   const checkAuthStatus = () => {
     const userToken = Cookies.get("userToken");
@@ -55,47 +49,10 @@ export function UserHeader() {
     const handleStorageChange = () => checkAuthStatus();
     window.addEventListener("storage", handleStorageChange);
 
-    if (isLoggedIn || isGoogleSignIn) {
-      const fetchNotifications = async () => {
-        try {
-          const response = await axios.get("/api/notifications", {
-            headers: { Authorization: `Bearer ${Cookies.get("userToken")}` },
-          });
-          const fetchedNotifications = response.data.notifications || [];
-          setNotifications(fetchedNotifications);
-          setUnreadCount(fetchedNotifications.filter((n: INotification) => !n.isRead).length);
-        } catch (error) {
-          console.error("Error fetching notifications:", error);
-        }
-      };
-      fetchNotifications();
-    }
-
     return () => {
       window.removeEventListener("storage", handleStorageChange);
     };
-  }, [isLoggedIn, isGoogleSignIn, user]); // Added 'user' to dependency array
-
-  const markNotificationRead = async (notificationId: string) => {
-    try {
-      await axios.patch(
-        `/api/notifications/${notificationId}/read`,
-        {},
-        { headers: { Authorization: `Bearer ${Cookies.get("userToken")}` } }
-      );
-      setNotifications((prev) =>
-        prev.map((n) => (n._id === notificationId ? { ...n, isRead: true } : n))
-      );
-      setUnreadCount((prev) => (prev > 0 ? prev - 1 : 0));
-    } catch (error) {
-      console.error("Error marking notification read:", error);
-    }
-  };
-
-  const handleNotificationClick = () => {
-    setNotificationDropdownOpen(!notificationDropdownOpen);
-    setDropdownOpen(false);
-  };
+  }, [user]);
 
   const handleLogout = () => {
     console.log("Logout clicked");
@@ -106,9 +63,6 @@ export function UserHeader() {
       setIsLoggedIn(false);
       setIsGoogleSignIn(false);
       setDropdownOpen(false);
-      setNotificationDropdownOpen(false);
-      setNotifications([]);
-      setUnreadCount(0);
       navigate("/login");
       console.log("Logout navigation attempted");
     } catch (error) {
@@ -120,15 +74,12 @@ export function UserHeader() {
     e.preventDefault();
     e.stopPropagation();
     console.log("Login button clicked");
-    console.log("Current pathname:", window.location.pathname);
-    console.log("Navigate function:", typeof navigate);
     
     try {
       navigate("/login");
       console.log("Navigate to /login called successfully");
     } catch (error) {
       console.error("Navigation error:", error);
-      // Fallback navigation
       window.location.href = "/login";
     }
   };
@@ -143,27 +94,18 @@ export function UserHeader() {
       console.log("Navigate to /register called successfully");
     } catch (error) {
       console.error("Navigation error:", error);
-      // Fallback navigation
       window.location.href = "/register";
     }
   };
 
-  // Debug: Log the current auth state
-  console.log("UserHeader render - Auth state:", { 
-    isLoggedIn, 
-    isGoogleSignIn, 
-    user: !!user,
-    showLoginButtons: !isLoggedIn && !isGoogleSignIn 
-  });
-
   return (
     <header className="bg-[#8b2525]">
-      <Notifications notificationsData={notifications} />
       <div className="container mx-auto px-20">
         <div className="flex items-center justify-between">
           <NavLink to="/" className="flex items-center gap-2 cursor-pointer">
             <img src="/src/assets/Logo.png" alt="Lingua Logo" className="h-16 w-20" />
           </NavLink>
+          
           <nav className="hidden md:flex items-center gap-8">
             {navigation.map((item) => (
               <NavLink
@@ -179,70 +121,19 @@ export function UserHeader() {
               </NavLink>
             ))}
           </nav>
+          
           <div className="flex items-center gap-4 relative">
+            {/* Language Selector */}
             <button className="flex items-center gap-1 text-white">
               <Globe className="h-6 w-6" />
               <span>En</span>
               <ChevronDown className="h-4 w-4" />
             </button>
-            {(isLoggedIn || isGoogleSignIn) && (
-              <div className="relative">
-                <Badge
-                  content={unreadCount > 0 ? unreadCount : null}
-                  color="danger"
-                  size="sm"
-                  isInvisible={unreadCount === 0}
-                >
-                  <button
-                    onClick={handleNotificationClick}
-                    className="flex items-center p-2 rounded-full hover:bg-gray-200"
-                    aria-label="Notifications"
-                  >
-                    <Bell className="h-6 w-6 text-white" />
-                  </button>
-                </Badge>
-                {notificationDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-64 bg-white border border-gray-300 shadow-lg rounded-lg z-50">
-                    <div className="flex flex-col p-2">
-                      {notifications.length === 0 ? (
-                        <p className="px-4 py-2 text-gray-500">No new notifications</p>
-                      ) : (
-                        notifications.map((notification) => (
-                          <div
-                            key={notification._id}
-                            className={`px-4 py-2 hover:bg-gray-100 cursor-pointer ${
-                              notification.isRead ? "bg-gray-50" : "bg-blue-50"
-                            }`}
-                            onClick={() => {
-                              if (!notification.isRead) {
-                                markNotificationRead(notification._id!);
-                              }
-                              if (notification.url) {
-                                window.open(notification.url, "_blank");
-                              }
-                              setNotificationDropdownOpen(false);
-                            }}
-                          >
-                            <p className="text-sm font-medium">{notification.heading}</p>
-                            <p className="text-xs text-gray-500">{notification.message}</p>
-                            <p className="text-xs text-gray-400">
-                              {new Date(notification.createdAt).toLocaleTimeString()}
-                            </p>
-                          </div>
-                        ))
-                      )}
-                      <NavLink
-                        to="/notifications"
-                        className="px-4 py-2 text-center text-blue-600 hover:bg-gray-100"
-                        onClick={() => setNotificationDropdownOpen(false)}
-                      >
-                        View All Notifications
-                      </NavLink>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+            
+            {/* Notification Component - Only show when logged in */}
+            {(isLoggedIn || isGoogleSignIn) && <UserNotificationComponent />}
+            
+            {/* Auth Section */}
             {!isLoggedIn && !isGoogleSignIn ? (
               <>
                 <button
@@ -264,14 +155,12 @@ export function UserHeader() {
               <div className="relative">
                 <button
                   className="flex items-center gap-2 px-3 py-2 bg-gray-200 rounded-full hover:bg-gray-300"
-                  onClick={() => {
-                    setDropdownOpen(!dropdownOpen);
-                    setNotificationDropdownOpen(false);
-                  }}
+                  onClick={() => setDropdownOpen(!dropdownOpen)}
                 >
                   <User className="h-5 w-5 text-black" />
                   <ChevronDown className="h-4 w-4 text-black" />
                 </button>
+                
                 {dropdownOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-300 shadow-lg rounded-lg z-50">
                     <div className="flex flex-col">

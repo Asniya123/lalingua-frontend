@@ -21,3 +21,15 @@ export interface ILanguage{
   imageUrl: string
 }
 
+export interface Transaction {
+  enrolledId: string;
+  date: Date;
+  amount: number;
+  transactionType: "credit" | "debit";
+  reason?: string;
+}
+
+export interface Wallet {
+  balance: number;
+  transactions: Transaction[];
+}

@@ -1,6 +1,6 @@
 import { AxiosError } from "axios";
 import adminAPI from "../api/adminInstance";
-import Admin, { ILanguage } from "../interfaces/admin";
+import Admin, { ILanguage, Wallet } from "../interfaces/admin";
 import { ICourse } from "../interfaces/user";
 
 export async function adminLogin(email: string, password: string): Promise<{
@@ -371,5 +371,36 @@ export async function CourseBlockUnblock(
     const axiosError = error as AxiosError<{ message?: string }>;
     console.error("Error updating course status:", axiosError.response?.data || axiosError.message);
     throw new Error(axiosError.response?.data?.message || "Failed to update course status");
+  }
+}
+
+
+//Wallet
+
+export async function getAdminWallet(adminId: string): Promise<{
+  success: boolean;
+  message: string;
+  wallet?: Wallet;
+}> {
+  try {
+    const response = await adminAPI.get(`/wallet/${adminId}`, {
+    
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+  console.log("Wallet fetched successfully:", response.data);
+    return {
+      success: true,
+      message: response.data.message || "Wallet retrieved successfully",
+      wallet: response.data.wallet, // Ensure the API returns { balance, transactions }
+    };
+  } catch (error) {
+    const axiosError = error as AxiosError<{ message?: string }>;
+    console.error("Error fetching admin wallet:", axiosError.response?.data || axiosError.message);
+    return {
+      success: false,
+      message: axiosError.response?.data?.message || "Failed to fetch wallet",
+    };
   }
 }

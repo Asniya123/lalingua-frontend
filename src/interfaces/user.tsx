@@ -112,6 +112,7 @@ export interface IReview{
   _id?: string;
   userId?: string;
   rating: number;
-  comment: string;
+  comment?: string;
   createdAt: string;
 }
+

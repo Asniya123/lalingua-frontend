@@ -1,3 +1,6 @@
+
+
+
 export default interface Tutor{
     _id?: string;
     name?: string;
@@ -34,8 +37,15 @@ export interface ICourse {
   status?: "active" | "blocked";
   createdAt?: Date;
   updatedAt?: Date;
+  studentsEnrolled: number;
+  totalRevenue?: number; 
+  averageRating: number;
+  totalReviews: number;
+  students: IEnrolledStudent[];
+  studentsWithReviews?: number;
+  reviews: IDashboardReview[];
+  tutorRevenue?: number;
 }
-
 
 export  interface ILesson {
     _id?: string;
@@ -48,19 +58,50 @@ export  interface ILesson {
   }
 
 
-  export interface IEnrolledStudent {
-  student: {
-    _id: string;
-    name: string;
-    profilePicture?: string;
-  };
-  course: {
-    _id: string;
-    courseTitle: string;
-  };
-  review?: {
-    rating: number;
-    comment?: string;
-  };
+
+
+export interface Transaction {
+  enrolledId: string;
+  date: Date;
+  amount: number;
+  transactionType: "credit" | "debit";
+  reason?: string;
+}
+
+export interface Wallet {
+  balance: number;
+  transactions: Transaction[];
+}
+
+
+
+export interface IEnrolledStudentsResponse {
+  success: boolean;
+  message: string;
+  students: IEnrolledStudent[];
+}
+
+
+
+
+export interface IEnrolledStudent {
+  id: string;
+  name: string;
+  courseId: string;
+  enrolledDate: string;
   progress: number;
+  review?: IReview
+  totalRevenue?: number;
+}
+
+export interface IDashboardReview extends IReview {
+  studentName?: string;
+}
+
+export interface IReview{
+  _id?: string;
+  userId?: string;
+  rating: number;
+  comment?: string;
+  createdAt?: string;
 }

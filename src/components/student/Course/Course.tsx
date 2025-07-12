@@ -5,13 +5,14 @@ import { useSelector } from "react-redux";
 import { Search, Star, Filter } from "lucide-react";
 import { Button } from "../../UI/Button";
 import { Badge } from "../../UI/Badge";
-import { Card, CardContent, CardFooter, CardHeader } from "../../UI/card";
+import { Card, CardContent, CardFooter,  CardHeader } from "../../UI/card";
 import { Input } from "../../UI/InputField";
 import { getCourse, getEnrolledCourses } from "../../../services/userAuth";
 import { RootState } from "../../../redux/store";
 import { ICourse } from "../../../interfaces/user";
 import { Icategory } from "../../../interfaces/admin";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../UI/Select";
+
 
 interface Student {
   _id: string;

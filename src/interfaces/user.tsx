@@ -14,6 +14,7 @@ export default interface Student {
     is_verified?: boolean;
     language?: string;
     profilePicture?: string | File | null
+    createdAt?: string;
   }
 
 

@@ -1,3 +1,4 @@
+import { ILessonPreview } from "./user";
 
 
 
@@ -16,6 +17,7 @@ export default interface Tutor{
     is_verified?: boolean;
     profilePicture?: string;
     status?: 'pending' | 'approved' | 'rejected' |  'blocked'
+    createdAt: string;
 }
 
 
@@ -26,25 +28,27 @@ export interface Login {
 
 
 export interface ICourse {
-  isBlock: boolean;
-  _id?: string;
-  courseTitle?: string;
-  description?: string;
-  imageUrl?: string;
-  regularPrice?: number;
-  category: string | { _id: string; name: string; description?: string; __v?: number };
-  language: string | { _id: string; name: string };
-  status?: "active" | "blocked";
+  _id: string;
+  courseTitle: string;
+  imageUrl: string;
+  category: string | { _id: string; name: string };
+  language?: string | { _id: string; name: string };
+  tutorId: string | { _id: string; name: string };
+  description: string;
+  regularPrice: number;
+  buyCount?: number;
+  isBlock?: boolean;
+  lessons?: ILessonPreview[];
   createdAt?: Date;
   updatedAt?: Date;
-  studentsEnrolled: number;
-  totalRevenue?: number; 
-  averageRating: number;
-  totalReviews: number;
-  students: IEnrolledStudent[];
-  studentsWithReviews?: number;
-  reviews: IDashboardReview[];
-  tutorRevenue?: number;
+  tutor?: { _id: string; name: string };
+  reviews?: IReview[];
+  studentsEnrolled?: number;
+  totalRevenue?: number;
+  averageRating?: number;
+  totalReviews?: number;
+  status?: "active" | "blocked" | "published";
+  totalStudents?: number;
 }
 
 export  interface ILesson {
@@ -92,6 +96,7 @@ export interface IEnrolledStudent {
   progress: number;
   review?: IReview
   totalRevenue?: number;
+  showReview?: boolean;
 }
 
 export interface IDashboardReview extends IReview {

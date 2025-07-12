@@ -1,22 +1,95 @@
+"use client";
+
 import { ReactNode, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Button } from "../../components/admin/button";
-import { useDispatch, useSelector } from "react-redux"; 
-import { RootState } from "../../redux/store"; 
-import { clearAdminData } from "../../redux/slice/adminSlice"; 
+import { useDispatch, useSelector } from "react-redux";
+import { RootState } from "../../redux/store";
+import { clearAdminData } from "../../redux/slice/adminSlice";
 import adminAPI from "../../api/adminInstance";
-import Cookies from "js-cookie"; 
+import Cookies from "js-cookie";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarRail,
+  SidebarProvider,
+  SidebarInset,
+} from "../UI/SideBar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "../UI/DropDown";
+import { Home, Users, Book, FileText, Settings, ChevronDown, Shield } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "../student/UI/avatar";
 
 interface AdminLayoutProps {
   children: ReactNode;
 }
 
+interface SidebarItem {
+  title: string;
+  path: string;
+  icon: React.ComponentType<{ className?: string }>;
+  isActive: boolean;
+}
+
 const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const dispatch = useDispatch(); 
+  const dispatch = useDispatch();
   const [dropDown, setDropDown] = useState(false);
   const admin = useSelector((state: RootState) => state.admin);
+
+  const sidebarItems: SidebarItem[] = [
+    { title: "Dashboard", path: "/admin/dashboard", icon: Home, isActive: location.pathname === "/admin/dashboard" },
+    { title: "Manage Users", path: "/admin/userList", icon: Users, isActive: location.pathname === "/admin/userList" },
+    {
+      title: "Tutor List",
+      path: "/admin/tutorList",
+      icon: Users,
+      isActive: location.pathname === "/admin/tutorList",
+    },
+    {
+      title: "Tutor Managing",
+      path: "/admin/tutorManaging",
+      icon: Users,
+      isActive: location.pathname === "/admin/tutorManaging",
+    },
+    {
+      title: "Category",
+      path: "/admin/listCategory",
+      icon: Book,
+      isActive:
+        location.pathname === "/admin/listCategory" ||
+        location.pathname.includes("/admin/category/edit") ||
+        location.pathname.includes("/admin/categories"),
+    },
+    {
+      title: "Language",
+      path: "/admin/listLanguage",
+      icon: Book,
+      isActive: location.pathname === "/admin/listLanguage" || location.pathname.includes("/admin/languages"),
+    },
+    {
+      title: "Course Managing",
+      path: "/admin/course",
+      icon: Book,
+      isActive: location.pathname === "/admin/course" || location.pathname.includes("/admin/courseManaging"),
+    },
+    { title: "Reports", path: "/admin/reports", icon: FileText, isActive: location.pathname === "/admin/reports" },
+    { title: "Settings", path: "/admin/settings", icon: Settings, isActive: location.pathname === "/admin/settings" },
+  ];
 
   const getTitle = () => {
     if (location.pathname.includes("/admin/users")) return "Manage Users";
@@ -35,26 +108,23 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   const handleLogout = async () => {
     try {
       if (admin.accessToken) {
-        await adminAPI.post("/logout", {}, {
-          headers: {
-            Authorization: `Bearer ${admin.accessToken}`,
-          },
-        });
+        await adminAPI.post(
+          "/logout",
+          {},
+          {
+            headers: {
+              Authorization: `Bearer ${admin.accessToken}`,
+            },
+          }
+        );
       }
-
-      // Clear Redux state
       dispatch(clearAdminData());
-
-      // Clear cookies manually (as a fallback, since clearAdminData already does this)
       Cookies.remove("adminId", { path: "/" });
       Cookies.remove("accessToken", { path: "/" });
       Cookies.remove("refreshToken", { path: "/" });
-
-      // Navigate to login page
       navigate("/admin/login");
     } catch (error) {
       console.error("Logout failed:", error);
-      // Fallback: Clear state and cookies even if API call fails
       dispatch(clearAdminData());
       Cookies.remove("adminId", { path: "/" });
       Cookies.remove("accessToken", { path: "/" });
@@ -64,125 +134,125 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      {/* Navbar */}
-      <nav className="bg-orange-500 p-4 shadow-md">
-        <div className="container mx-auto flex justify-between items-center">
-          <div className="text-white text-2xl font-bold">{getTitle()}</div>
-          <Button onClick={handleLogout} className="bg-white text-orange-500 hover:bg-orange-100">
-            Logout
-          </Button>
-        </div>
-      </nav>
-
-      {/* Sidebar + Content */}
-      <div className="flex">
-        {/* Sidebar */}
-        <aside className="w-1/4 bg-white shadow-lg h-screen p-6">
-          <ul className="space-y-4">
-            <li>
-              <button
-                onClick={() => navigate("/admin/dashboard")}
-                className="w-full text-left text-orange-500 hover:text-orange-600 font-semibold"
-              >
-                Dashboard
-              </button>
-            </li>
-            <li>
-              <button
-                onClick={() => navigate("/admin/userList")}
-                className="w-full text-left text-orange-500 hover:text-orange-600 font-semibold"
-              >
-                Manage Users
-              </button>
-            </li>
-
-            {/* Dropdown Section */}
-            <li className="relative">
-              <button
-                className="w-full text-left text-orange-500 hover:text-orange-600 font-semibold"
-                onClick={() => setDropDown(!dropDown)}
-              >
-                Manage Tutors ▼
-              </button>
-
-              {dropDown && (
-                <div className="absolute left-0 mt-2 w-48 bg-white border border-gray-300 shadow-lg rounded-lg z-50">
-                  <div className="flex flex-col">
-                    <button
-                      className="px-4 py-2 text-left hover:bg-gray-100"
-                      onClick={() => {
-                        navigate("/admin/tutorList");
-                        setDropDown(false);
-                      }}
-                    >
-                      Tutor List
-                    </button>
-                    <button
-                      className="px-4 py-2 text-left hover:bg-gray-100"
-                      onClick={() => {
-                        navigate("/admin/tutorManging");
-                        setDropDown(false);
-                      }}
-                    >
-                      Tutor Managing
-                    </button>
+    <SidebarProvider>
+      <Sidebar variant="inset" className="w-64 bg-white shadow-lg">
+        <SidebarHeader>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton size="lg" asChild>
+                <div className="flex items-center gap-2">
+                  {/* <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-orange-600 text-white">
+                    <Shield className="size-4" />
+                  </div> */}
+                  <div className="grid flex-1 text-left text-sm leading-tight">
+                    <img src="/src/assets/Logo.png" alt="Lingua Logo" className="h-16 w-20" />
+                    
                   </div>
                 </div>
-              )}
-            </li>
-
-            <li>
-              <button
-                onClick={() => navigate("/admin/listCategory")}
-                className="w-full text-left text-orange-500 hover:text-orange-600 font-semibold"
-              >
-                Category
-              </button>
-            </li>
-
-            <li>
-              <button
-                onClick={() => navigate("/admin/listLanguage")}
-                className="w-full text-left text-orange-500 hover:text-orange-600 font-semibold"
-              >
-                Language
-              </button>
-            </li>
-            
-
-            <li>
-              <button
-                onClick={() => navigate("/admin/course")}
-                className="w-full text-left text-orange-500 hover:text-orange-600 font-semibold"
-              >
-                Course Managing
-              </button>
-            </li>
-           
-            <li>
-              <button
-                onClick={() => navigate("/admin/reports")}
-                className="w-full text-left text-orange-500 hover:text-orange-600 font-semibold"
-              >
-                Reports
-              </button>
-            </li>
-            <li>
-              <button
-                onClick={() => navigate("/admin/settings")}
-                className="w-full text-left text-orange-500 hover:text-orange-600 font-semibold"
-              >
-                Settings
-              </button>
-            </li>
-          </ul>
-        </aside>
-
-        {/* Main Content */}
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarHeader>
+        <SidebarContent>
+          <SidebarGroup>
+            <SidebarGroupLabel>Platform Management</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {sidebarItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={item.isActive}
+                      onClick={() => {
+                        navigate(item.path);
+                        if (item.path.includes("tutor")) {
+                          setDropDown(false);
+                        }
+                      }}
+                      className="flex items-center gap-2 text-orange-500 hover:text-orange-600 font-semibold"
+                    >
+                      <div>
+                        <item.icon className="size-4" />
+                        <span>{item.title}</span>
+                      </div>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </SidebarContent>
+        <SidebarFooter>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <SidebarMenuButton
+                    size="lg"
+                    className="data-[state=open]:bg-orange-100 data-[state=open]:text-orange-600"
+                  >
+                    {/* <Avatar className="h-8 w-8 rounded-lg">
+                      <AvatarImage src="/placeholder.svg?height=32&width=32" alt="Admin" />
+                      <AvatarFallback className="rounded-lg">AD</AvatarFallback>
+                    </Avatar>
+                    <div className="grid flex-1 text-left text-sm leading-tight">
+                      <span className="truncate font-semibold">Admin User</span>
+                      <span className="truncate text-xs">admin@eduplatform.com</span>
+                    </div> */}
+                    <ChevronDown className="ml-auto size-4" />
+                  </SidebarMenuButton>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
+                  side="bottom"
+                  align="end"
+                  sideOffset={4}
+                >
+                  <DropdownMenuLabel className="p-0 font-normal">
+                    <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
+                      {/* <Avatar className="h-8 w-8 rounded-lg">
+                        <AvatarImage src="/placeholder.svg?height=32&width=32" alt="Admin" />
+                        <AvatarFallback className="rounded-lg">AD</AvatarFallback>
+                      </Avatar> */}
+                      <div className="grid flex-1 text-left text-sm leading-tight">
+                        <span className="truncate font-semibold">LaLingua</span>
+                        {/* <span className="truncate text-xs">admin@eduplatform.com</span> */}
+                      </div>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => navigate("/admin/settings")}
+                    className="hover:bg-orange-100 cursor-pointer"
+                  >
+                    Account Settings
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => navigate("/admin/settings")}
+                    className="hover:bg-orange-100 cursor-pointer"
+                  >
+                    System Preferences
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout} className="hover:bg-orange-100 cursor-pointer">
+                    Log out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarFooter>
+        <SidebarRail />
+      </Sidebar>
+      <SidebarInset>
+        <nav className="bg-orange-500 p-4 shadow-md">
+          <div className="container mx-auto flex justify-between items-center">
+            <div className="text-white text-2xl font-bold">{getTitle()}</div>
+          </div>
+        </nav>
         <main className="flex-1 p-6">{children}</main>
-      </div>
-    </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 };
 

@@ -1,7 +1,8 @@
 import { AxiosError } from "axios";
 import adminAPI from "../api/adminInstance";
-import Admin, { ILanguage, Wallet } from "../interfaces/admin";
+import Admin, { GetTutorResponse, GetUsersResponse, ILanguage, Wallet } from "../interfaces/admin";
 import { ICourse } from "../interfaces/user";
+import { IEnrolledStudent, IEnrolledStudentsResponse } from "../interfaces/tutor";
 
 export async function adminLogin(email: string, password: string): Promise<{
     adminId: string | null;
@@ -23,11 +24,8 @@ export async function adminLogin(email: string, password: string): Promise<{
         }
 };
 
-export const getUsers = async (
-  page: number = 1,
-  limit: number = 5,
-  search: string = ""
-): Promise<{ users: any[]; total: number }> => {
+// Updated service function
+export const getUsers = async (page: number, limit: number, search: string): Promise<GetUsersResponse> => {
   try {
     const response = await adminAPI.get(`/getUsers`, {
       params: { page, limit, search },
@@ -41,12 +39,16 @@ export const getUsers = async (
     return {
       users: response.data.data.users,
       total: response.data.data.pagination.totalItems,
+      totalStudents: response.data.data.totalStudents || 0, 
     };
   } catch (error) {
     console.error("Error fetching users:", error);
     throw error;
   }
 };
+
+
+
 
 
 export const blockUnblock = async (userId: string, isBlocked: boolean) => {
@@ -64,7 +66,7 @@ export const getTutor = async (
   limit: number = 5,
   status: string = 'approved',
   search: string = ""
-): Promise<{ tutors: any[]; total: number }> => {
+): Promise<GetTutorResponse> => {
   try {
     const response = await adminAPI.get(`/getTutor`, {
       params: { page, limit, status, search },
@@ -77,12 +79,14 @@ export const getTutor = async (
     return {
       tutors: response.data.data.tutors,
       total: response.data.data.pagination.totalItems,
+      totalApprovedTutors: response.data.data.totalApprovedTutors || 0 // Only approved tutors count
     };
   } catch (error) {
     console.error("Error fetching tutors:", error);
     throw error;
   }
 };
+
 
 
 export const managingTutor = async (tutorId: string, isBlocked: boolean) => {
@@ -339,19 +343,31 @@ export async function getCourses(
     const response = await adminAPI.get('/getCourses', {
       params: { page: currentPage, limit, search },
     });
+    console.log('getCourses - API Response:', JSON.stringify(response.data, null, 2));
+
+    // Handle different possible response structures
+    const courses = response.data.data?.courses || response.data.courses || [];
+    const total = 
+      response.data.data?.pagination?.totalItems || 
+      response.data.data?.pagination?.totalItem || 
+      response.data.total || 
+      response.data.pagination?.total || 
+      0;
+
+    console.log(`getCourses - Extracted courses: ${courses.length}, total: ${total}`);
+
     return {
       success: true,
       message: 'Courses retrieved successfully',
-      courses: response.data.data.courses || [],
-      total: response.data.data.pagination.totalItem || 0
+      courses: courses,
+      total: total,
     };
   } catch (error) {
     const axiosError = error as AxiosError<{ message?: string }>;
-    console.error("Error listing courses:", axiosError.response?.data || axiosError.message);
+    console.error("Error listing courses:", JSON.stringify(axiosError.response?.data || axiosError.message, null, 2));
     throw new Error(axiosError.response?.data?.message || "Failed to list courses");
   }
 }
-
 
 //BlockUnblock course
 
@@ -404,3 +420,123 @@ export async function getAdminWallet(adminId: string): Promise<{
     };
   }
 }
+
+
+//Dashboard
+
+export const getDashboardStats = async (): Promise<{
+  totalStudents: number;
+  totalTutors: number;
+  totalCourses: number;
+  totalRevenue: number;
+}> => {
+  try {
+    console.log("Fetching dashboard stats...");
+
+    const [usersData, approvedTutorsData, pendingTutorsData, rejectedTutorsData, coursesData, revenueData] = await Promise.all([
+      getUsers(1, 1, ""),
+      getTutor(1, 1, 'approved', ""),
+      getTutor(1, 1, 'pending', ""),
+      getTutor(1, 1, 'rejected', ""),
+      getCourses(1, 1, ""),
+      adminAPI.get('/revenue'),
+    ]);
+
+    console.log("getDashboardStats - Courses Data:", JSON.stringify(coursesData, null, 2));
+    console.log("getDashboardStats - Revenue Data:", JSON.stringify(revenueData.data, null, 2));
+
+    const totalTutors = 
+      (approvedTutorsData.totalApprovedTutors || 0) +
+      (pendingTutorsData.totalApprovedTutors || 0) +
+      (rejectedTutorsData.totalApprovedTutors || 0);
+
+    const stats = {
+      totalStudents: usersData.totalStudents || 0,
+      totalTutors: totalTutors,
+      totalCourses: coursesData.total || 0, // Ensure total is used directly
+      totalRevenue: revenueData.data.totalRevenue || 0,
+    };
+
+    console.log("getDashboardStats - Final Stats:", JSON.stringify(stats, null, 2));
+
+    return stats;
+  } catch (error) {
+    console.error("Error fetching dashboard stats:", error);
+    throw error;
+  }
+};
+
+export async function getCourseEnrolledStudents(courseId: string): Promise<IEnrolledStudentsResponse> {
+  try {
+    if (!courseId) {
+      throw new Error('Course ID is required');
+    }
+    console.log('Admin service: Fetching enrolled students for course:', courseId);
+
+    const response = await adminAPI.get('/enrolledStudents', {
+      params: { courseId },
+    });
+
+    console.log('Admin service: Full API response:', JSON.stringify(response.data, null, 2));
+
+    if (!response.data || !Array.isArray(response.data.students)) {
+      console.error('Admin service: Invalid or empty students data:', response.data);
+      return {
+        success: false,
+        message: 'No students data received',
+        students: [],
+      };
+    }
+
+    // Fetch course details to get regularPrice
+    const courseResponse = await adminAPI.get(`/getCourses`, {
+      params: { courseId, page: 1, limit: 1 },
+    });
+    const course = courseResponse.data.data.courses.find((c: ICourse) => c._id === courseId);
+    const regularPrice = course?.regularPrice || 0;
+    console.log('Admin service: Course regularPrice:', regularPrice);
+
+    const formattedStudents: IEnrolledStudent[] = response.data.students.map((student: any, index: number) => {
+      console.log(`Admin service: Formatting student ${index + 1}:`, JSON.stringify(student, null, 2));
+      return {
+        id: student.id || student._id?.toString() || `student-${index}`,
+        name: student.name || 'Unknown Student',
+        courseId: student.courseId?.toString() || courseId,
+        enrolledDate: student.enrolledDate || new Date().toISOString(),
+        progress: typeof student.progress === 'number' ? student.progress : 0,
+        totalRevenue: regularPrice * 0.3, 
+        review: student.review
+          ? {
+              _id: student.review._id || `review-${index}`,
+              courseId: student.review.courseId || courseId,
+              userId: student.review.userId || student.id,
+              rating: Number(student.review.rating) || 0,
+              comment: student.review.comment || '',
+              createdAt: student.review.createdAt || new Date().toISOString(),
+              updatedAt: student.review.updatedAt,
+            }
+          : undefined,
+      };
+    });
+
+    console.log(`Admin service: Formatted ${formattedStudents.length} students:`, JSON.stringify(formattedStudents, null, 2));
+
+    return {
+      success: true,
+      message: `Enrolled students retrieved successfully - ${formattedStudents.length} students found`,
+      students: formattedStudents,
+    };
+  } catch (error) {
+    const axiosError = error as AxiosError<{ message?: string }>;
+    console.error('Admin service: Detailed error:', {
+      message: axiosError.message,
+      status: axiosError.response?.status,
+      data: axiosError.response?.data,
+    });
+    return {
+      success: false,
+      message: axiosError.response?.data?.message || 'Failed to fetch enrolled students',
+      students: [],
+    };
+  }
+};

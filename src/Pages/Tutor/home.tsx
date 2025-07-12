@@ -320,15 +320,7 @@ const TutorDashboard = () => {
                         {new Date(student.enrolledDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
                       </p>
                     </div>
-                    <div className="text-right min-w-[120px]">
-                      <p className="text-sm text-gray-600 mb-1">Progress</p>
-                      <div className="flex items-center">
-                        <div className="w-20 bg-gray-200 rounded-full h-2 mr-2">
-                          <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${Math.min(student.progress || 0, 100)}%` }}></div>
-                        </div>
-                        <span className="text-sm font-medium text-gray-700">{student.progress || 0}%</span>
-                      </div>
-                    </div>
+                    
                   </div>
                 ))}
               </div>
@@ -387,16 +379,7 @@ const TutorDashboard = () => {
               <p className="text-gray-600">Here's your teaching dashboard overview</p>
             </div>
           </div>
-          <button
-            onClick={() => {
-             
-              console.log('Current courses:', courses);
-              console.log('Current tutor:', tutor);
-            }}
-            className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-sm"
-          >
-            Debug Info
-          </button>
+          
         </div>
 
         {loading ? (

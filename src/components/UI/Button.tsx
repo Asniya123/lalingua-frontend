@@ -3,14 +3,14 @@ import React from 'react';
 interface ButtonProps {
   children: React.ReactNode;
   className?: string;
-  variant?: 'outline' | 'filled' | 'default' | 'light';
-  size?: 'sm' | 'lg';
+  variant?: 'outline' | 'filled' | 'default' | 'light' | 'ghost';
+  size?: 'sm' | 'lg' | 'icon';
   onClick?: React.MouseEventHandler<HTMLButtonElement>;
   type?: 'button' | 'submit' | 'reset';
   disabled?: boolean;
   isIconOnly?: boolean;
   color?: 'primary' | 'secondary' | 'danger';
-  title?: string; 
+  title?: string;
 }
 
 const Button: React.FC<ButtonProps> = ({
@@ -23,7 +23,7 @@ const Button: React.FC<ButtonProps> = ({
   disabled = false,
   isIconOnly = false,
   color = 'primary',
-  title, 
+  title,
 }) => {
   const baseStyles = 'rounded-md focus:outline-none transition-colors duration-200';
 
@@ -48,12 +48,18 @@ const Button: React.FC<ButtonProps> = ({
       secondary: 'bg-gray-200 text-gray-800 hover:bg-gray-300',
       danger: 'bg-gray-200 text-gray-800 hover:bg-gray-300',
     },
+    ghost: {
+      primary: 'text-blue-600 hover:bg-blue-50',
+      secondary: 'text-gray-600 hover:bg-gray-50',
+      danger: 'text-red-600 hover:bg-red-50',
+    },
   };
 
   const selectedVariant = variantStyles[variant]?.[color] || '';
-  const sizeStyles = size === 'lg' ? 'text-lg px-5 py-3' : 'text-sm px-3 py-2';
+  const sizeStyles =
+    size === 'lg' ? 'text-lg px-5 py-3' : size === 'icon' ? 'p-2 h-8 w-8' : 'text-sm px-3 py-2';
   const disabledStyles = disabled ? 'opacity-50 cursor-not-allowed' : '';
-  const iconOnlyStyles = isIconOnly ? 'p-2' : '';
+  const iconOnlyStyles = isIconOnly ? 'p-2 h-8 w-8' : '';
 
   return (
     <button
@@ -61,7 +67,7 @@ const Button: React.FC<ButtonProps> = ({
       onClick={onClick}
       disabled={disabled}
       className={`${baseStyles} ${selectedVariant} ${sizeStyles} ${iconOnlyStyles} ${disabledStyles} ${className}`}
-      title={title} 
+      title={title}
     >
       {children}
     </button>

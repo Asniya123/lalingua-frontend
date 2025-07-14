@@ -79,3 +79,27 @@ export interface GetCourseResponse{
   total: number
   totalCourses: number
 }
+
+
+export interface IEnrollmentStats {
+  daily: { day: string; count: number }[];
+  monthly: { month: string; count: number }[];
+  yearly: { year: number; count: number }[];
+}
+
+export interface IEnrollmentStatsResponse {
+  success: boolean;
+  message: string;
+  data: IEnrollmentStats;
+}
+
+export interface ChartSection {
+  labels: string[];
+  counts: number[];
+}
+
+export interface ChartData {
+  daily: ChartSection;
+  monthly: ChartSection;
+  yearly: ChartSection;
+}

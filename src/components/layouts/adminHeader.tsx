@@ -1,5 +1,3 @@
-"use client";
-
 import { ReactNode, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -30,7 +28,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "../UI/DropDown";
-import { Home, Users, Book, FileText, Settings, ChevronDown, Shield } from "lucide-react";
+import { Home, Users, Book, FileText, Settings, ChevronDown } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "../student/UI/avatar";
 
 interface AdminLayoutProps {
@@ -54,26 +52,13 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   const sidebarItems: SidebarItem[] = [
     { title: "Dashboard", path: "/admin/dashboard", icon: Home, isActive: location.pathname === "/admin/dashboard" },
     { title: "Manage Users", path: "/admin/userList", icon: Users, isActive: location.pathname === "/admin/userList" },
-    {
-      title: "Tutor List",
-      path: "/admin/tutorList",
-      icon: Users,
-      isActive: location.pathname === "/admin/tutorList",
-    },
-    {
-      title: "Tutor Managing",
-      path: "/admin/tutorManaging",
-      icon: Users,
-      isActive: location.pathname === "/admin/tutorManaging",
-    },
+    { title: "Tutor List", path: "/admin/tutorList", icon: Users, isActive: location.pathname === "/admin/tutorList" },
+    { title: "Tutor Managing", path: "/admin/tutorManaging", icon: Users, isActive: location.pathname === "/admin/tutorManaging" },
     {
       title: "Category",
       path: "/admin/listCategory",
       icon: Book,
-      isActive:
-        location.pathname === "/admin/listCategory" ||
-        location.pathname.includes("/admin/category/edit") ||
-        location.pathname.includes("/admin/categories"),
+      isActive: location.pathname === "/admin/listCategory" || location.pathname.includes("/admin/category/edit") || location.pathname.includes("/admin/categories"),
     },
     {
       title: "Language",
@@ -98,7 +83,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
     if (location.pathname.includes("/admin/category/edit")) return "Edit Category";
     if (location.pathname.includes("/admin/languages")) return "Add Language";
     if (location.pathname.includes("/admin/tutorList")) return "Tutor List";
-    if (location.pathname.includes("/admin/tutorManaging")) return "Tutor Managing";
+    if (location.pathname.includes("/admin/tutorManging")) return "Tutor Managing";
     if (location.pathname.includes("/admin/courseManaging")) return "Course Managing";
     if (location.pathname.includes("/admin/reports")) return "Reports";
     if (location.pathname.includes("/admin/settings")) return "Settings";
@@ -108,15 +93,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   const handleLogout = async () => {
     try {
       if (admin.accessToken) {
-        await adminAPI.post(
-          "/logout",
-          {},
-          {
-            headers: {
-              Authorization: `Bearer ${admin.accessToken}`,
-            },
-          }
-        );
+        await adminAPI.post("/logout", {}, { headers: { Authorization: `Bearer ${admin.accessToken}` } });
       }
       dispatch(clearAdminData());
       Cookies.remove("adminId", { path: "/" });
@@ -141,12 +118,8 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
             <SidebarMenuItem>
               <SidebarMenuButton size="lg" asChild>
                 <div className="flex items-center gap-2">
-                  {/* <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-orange-600 text-white">
-                    <Shield className="size-4" />
-                  </div> */}
                   <div className="grid flex-1 text-left text-sm leading-tight">
                     <img src="/src/assets/Logo.png" alt="Lingua Logo" className="h-16 w-20" />
-                    
                   </div>
                 </div>
               </SidebarMenuButton>
@@ -187,50 +160,23 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
             <SidebarMenuItem>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <SidebarMenuButton
-                    size="lg"
-                    className="data-[state=open]:bg-orange-100 data-[state=open]:text-orange-600"
-                  >
-                    {/* <Avatar className="h-8 w-8 rounded-lg">
-                      <AvatarImage src="/placeholder.svg?height=32&width=32" alt="Admin" />
-                      <AvatarFallback className="rounded-lg">AD</AvatarFallback>
-                    </Avatar>
-                    <div className="grid flex-1 text-left text-sm leading-tight">
-                      <span className="truncate font-semibold">Admin User</span>
-                      <span className="truncate text-xs">admin@eduplatform.com</span>
-                    </div> */}
+                  <SidebarMenuButton size="lg" className="data-[state=open]:bg-orange-100 data-[state=open]:text-orange-600">
                     <ChevronDown className="ml-auto size-4" />
                   </SidebarMenuButton>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
-                  side="bottom"
-                  align="end"
-                  sideOffset={4}
-                >
+                <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg" side="bottom" align="end" sideOffset={4}>
                   <DropdownMenuLabel className="p-0 font-normal">
                     <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                      {/* <Avatar className="h-8 w-8 rounded-lg">
-                        <AvatarImage src="/placeholder.svg?height=32&width=32" alt="Admin" />
-                        <AvatarFallback className="rounded-lg">AD</AvatarFallback>
-                      </Avatar> */}
                       <div className="grid flex-1 text-left text-sm leading-tight">
                         <span className="truncate font-semibold">LaLingua</span>
-                        {/* <span className="truncate text-xs">admin@eduplatform.com</span> */}
                       </div>
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={() => navigate("/admin/settings")}
-                    className="hover:bg-orange-100 cursor-pointer"
-                  >
+                  <DropdownMenuItem onClick={() => navigate("/admin/settings")} className="hover:bg-orange-100 cursor-pointer">
                     Account Settings
                   </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => navigate("/admin/settings")}
-                    className="hover:bg-orange-100 cursor-pointer"
-                  >
+                  <DropdownMenuItem onClick={() => navigate("/admin/settings")} className="hover:bg-orange-100 cursor-pointer">
                     System Preferences
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
@@ -247,10 +193,22 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
       <SidebarInset>
         <nav className="bg-orange-500 p-4 shadow-md">
           <div className="container mx-auto flex justify-between items-center">
-            <div className="text-white text-2xl font-bold">{getTitle()}</div>
+            <div className="text-white text-2xl font-bold flex items-center gap-2">
+              {location.pathname === "/admin/dashboard" && <Home className="size-6" />}
+              {location.pathname.includes("/admin/users") && <Users className="size-6" />}
+              {location.pathname.includes("/admin/tutorList") && <Users className="size-6" />}
+              {location.pathname.includes("/admin/tutorManging") && <Users className="size-6" />}
+              {location.pathname.includes("/admin/listCategory") && <Book className="size-6" />}
+              {location.pathname.includes("/admin/category/edit") && <Book className="size-6" />}
+              {location.pathname.includes("/admin/languages") && <Book className="size-6" />}
+              {location.pathname.includes("/admin/courseManaging") && <Book className="size-6" />}
+              {location.pathname.includes("/admin/reports") && <FileText className="size-6" />}
+              {location.pathname.includes("/admin/settings") && <Settings className="size-6" />}
+              {getTitle()}
+            </div>
           </div>
         </nav>
-        <main className="flex-1 p-6">{children}</main>
+        <main className="flex-1 p-0">{children}</main> {/* Changed p-6 to p-0 to remove padding */}
       </SidebarInset>
     </SidebarProvider>
   );

@@ -1,6 +1,6 @@
 import { AxiosError } from "axios";
 import adminAPI from "../api/adminInstance";
-import Admin, { GetTutorResponse, GetUsersResponse, ILanguage, Wallet } from "../interfaces/admin";
+import Admin, { GetTutorResponse, GetUsersResponse, IEnrollmentStats, IEnrollmentStatsResponse, ILanguage, Wallet } from "../interfaces/admin";
 import { ICourse } from "../interfaces/user";
 import { IEnrolledStudent, IEnrolledStudentsResponse } from "../interfaces/tutor";
 
@@ -79,7 +79,7 @@ export const getTutor = async (
     return {
       tutors: response.data.data.tutors,
       total: response.data.data.pagination.totalItems,
-      totalApprovedTutors: response.data.data.totalApprovedTutors || 0 // Only approved tutors count
+      totalApprovedTutors: response.data.data.totalApprovedTutors || 0
     };
   } catch (error) {
     console.error("Error fetching tutors:", error);
@@ -102,18 +102,37 @@ export const managingTutor = async (tutorId: string, isBlocked: boolean) => {
 
 export const getTutorsApproveOrReject = async (search: string = "") => {
   try {
-    const response = await adminAPI.get(`/getTutorManage`, {params: {search},
+    const response = await adminAPI.get(`/getTutorManage`, {
+      params: { search },
     });
-    console.log("API Response:", response.data); 
-    if (!Array.isArray(response.data.tutors)) { 
-      throw new Error("Invalid response structure: Expected an array");
+    
+    console.log("API Response:", response.data);
+
+    if (!response.data || !response.data.success) {
+      throw new Error("API request failed");
     }
-    return response.data.tutors;  
-  } catch (error) {
-    console.error("Error fetching tutors:", error);
-    throw error;
+    
+
+    if (!Array.isArray(response.data.tutors)) {
+      throw new Error("Invalid response structure: Expected tutors array");
+    }
+    
+    return response.data.tutors;
+  }catch (error: unknown) {
+  if (error && typeof error === "object" && "response" in error) {
+    const err = error as { response: { data?: { message?: string } } };
+    const message = err.response.data?.message || "Server error occurred";
+    throw new Error(message);
+  } else if (error && typeof error === "object" && "request" in error) {
+    throw new Error("No response from server. Please check your connection.");
+  } else if (error instanceof Error) {
+    throw new Error(error.message || "An unexpected error occurred");
+  } else {
+    throw new Error("An unexpected error occurred");
   }
-};
+}
+}
+
 
 
 export const updateTutorStatus = async (tutorId: string, status: 'approved' | 'rejected', reason?: string) => {
@@ -466,6 +485,7 @@ export const getDashboardStats = async (): Promise<{
   }
 };
 
+
 export async function getCourseEnrolledStudents(courseId: string): Promise<IEnrolledStudentsResponse> {
   try {
     if (!courseId) {
@@ -540,3 +560,55 @@ export async function getCourseEnrolledStudents(courseId: string): Promise<IEnro
     };
   }
 };
+
+
+export async function getEnrollmentStats(): Promise<IEnrollmentStatsResponse> {
+  try {
+    console.log('Enrollment service: Fetching enrollment statistics');
+    const response = await adminAPI.get('/stats');
+    console.log('Enrollment service: Raw response status:', response.status);
+    console.log('Enrollment service: Raw response data:', response.data);
+
+    if (!response.data || typeof response.data !== 'object' || !response.data.success || !response.data.data) {
+      console.error('Enrollment service: Invalid or empty stats data:', response.data);
+      throw new Error('No enrollment stats data received');
+    }
+
+    const { daily, monthly, yearly } = response.data.data;
+
+    const formattedStats: IEnrollmentStats = {
+      daily: daily.map((item: { day: string; count: number }, index: number) => ({
+        day: item.day,
+        count: item.count || 0,
+      })),
+      monthly: monthly.map((item: { month: string; count: number }, index: number) => ({
+        month: item.month,
+        count: item.count || 0,
+      })),
+      yearly: yearly.map((item: { year: number; count: number }, index: number) => ({
+        year: item.year,
+        count: item.count || 0,
+      })),
+    };
+
+    console.log('Enrollment service: Formatted enrollment stats:', JSON.stringify(formattedStats, null, 2));
+
+    return {
+      success: true,
+      message: 'Enrollment stats retrieved successfully',
+      data: formattedStats,
+    };
+  } catch (error) {
+    const axiosError = error as AxiosError<{ message?: string }>;
+    console.error('Enrollment service: Detailed error:', {
+      message: axiosError.message,
+      status: axiosError.response?.status,
+      data: axiosError.response?.data,
+    });
+    return {
+      success: false,
+      message: axiosError.response?.data?.message || 'Failed to fetch enrollment stats',
+      data: { daily: [], monthly: [], yearly: [] },
+    };
+  }
+}

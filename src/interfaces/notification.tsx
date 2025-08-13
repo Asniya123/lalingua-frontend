@@ -1,13 +1,17 @@
-export default interface INotification{
-    _id?: string;
-    heading: string;
-    isRead: boolean;
-    url: string;
-    from: string;
-    fromModel:"User" | "Tutor" ;
-    to: string;
-    toModel:"User" | "Tutor" ;
-    message: string;
-     type?: string; 
-  createdAt: string;
-  }
+// // src/interfaces/notification.ts
+// export interface INotification {
+//   _id: string;
+//   heading: string;
+//   message: string;
+//   createdAt: string;
+//   isRead: boolean;
+//   roomId: string;
+//   senderId: string;
+//   receiverId: string;
+// }
+
+// export interface NotificationResponse<T> {
+//   success: boolean;
+//   message: string;
+//   data?: T;
+// }

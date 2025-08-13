@@ -117,3 +117,24 @@ export interface IReview{
   createdAt: string;
 }
 
+
+
+//contact
+
+export interface ContactFormData {
+  name: string;
+  email: string;
+  subject?: string;
+  message: string;
+}
+
+export interface ContactMessage extends ContactFormData {
+  _id: string;
+  createdAt: string;
+}
+
+export interface ContactResponse {
+  success: boolean;
+  message: string;
+  data?: ContactMessage | ContactMessage[];
+}

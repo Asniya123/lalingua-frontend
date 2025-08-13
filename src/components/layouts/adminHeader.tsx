@@ -1,4 +1,4 @@
-import { ReactNode, useState } from "react";
+import { ReactNode } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "../../redux/store";
@@ -20,16 +20,8 @@ import {
   SidebarProvider,
   SidebarInset,
 } from "../UI/SideBar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "../UI/DropDown";
-import { Home, Users, Book, FileText, Settings, ChevronDown } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "../student/UI/avatar";
+import { Home, Users, Book, FileText, Settings } from "lucide-react";
+import Logo from "../../assets/Logo.png"; // Import logo if in src/assets
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -46,14 +38,13 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useDispatch();
-  const [dropDown, setDropDown] = useState(false);
   const admin = useSelector((state: RootState) => state.admin);
 
   const sidebarItems: SidebarItem[] = [
     { title: "Dashboard", path: "/admin/dashboard", icon: Home, isActive: location.pathname === "/admin/dashboard" },
     { title: "Manage Users", path: "/admin/userList", icon: Users, isActive: location.pathname === "/admin/userList" },
     { title: "Tutor List", path: "/admin/tutorList", icon: Users, isActive: location.pathname === "/admin/tutorList" },
-    { title: "Tutor Managing", path: "/admin/tutorManaging", icon: Users, isActive: location.pathname === "/admin/tutorManaging" },
+    { title: "Tutor Managing", path: "/admin/tutorManging", icon: Users, isActive: location.pathname === "/admin/tutorManging" },
     {
       title: "Category",
       path: "/admin/listCategory",
@@ -117,9 +108,13 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton size="lg" asChild>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 p-2">
                   <div className="grid flex-1 text-left text-sm leading-tight">
-                    <img src="/src/assets/Logo.png" alt="Lingua Logo" className="h-16 w-20" />
+                    <img
+                      src={Logo}
+                      alt="Lingua Logo"
+                      className="h-12 w-16 object-contain"
+                    />
                   </div>
                 </div>
               </SidebarMenuButton>
@@ -136,12 +131,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
                     <SidebarMenuButton
                       asChild
                       isActive={item.isActive}
-                      onClick={() => {
-                        navigate(item.path);
-                        if (item.path.includes("tutor")) {
-                          setDropDown(false);
-                        }
-                      }}
+                      onClick={() => navigate(item.path)}
                       className="flex items-center gap-2 text-orange-500 hover:text-orange-600 font-semibold"
                     >
                       <div>
@@ -158,33 +148,13 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
         <SidebarFooter>
           <SidebarMenu>
             <SidebarMenuItem>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <SidebarMenuButton size="lg" className="data-[state=open]:bg-orange-100 data-[state=open]:text-orange-600">
-                    <ChevronDown className="ml-auto size-4" />
-                  </SidebarMenuButton>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg" side="bottom" align="end" sideOffset={4}>
-                  <DropdownMenuLabel className="p-0 font-normal">
-                    <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                      <div className="grid flex-1 text-left text-sm leading-tight">
-                        <span className="truncate font-semibold">LaLingua</span>
-                      </div>
-                    </div>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => navigate("/admin/settings")} className="hover:bg-orange-100 cursor-pointer">
-                    Account Settings
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate("/admin/settings")} className="hover:bg-orange-100 cursor-pointer">
-                    System Preferences
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout} className="hover:bg-orange-100 cursor-pointer">
-                    Log out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <SidebarMenuButton
+                size="lg"
+                onClick={handleLogout}
+                className="flex items-center gap-2 text-orange-500 hover:text-orange-600 font-semibold"
+              >
+                <span>Log out</span>
+              </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarFooter>
@@ -208,7 +178,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
             </div>
           </div>
         </nav>
-        <main className="flex-1 p-0">{children}</main> {/* Changed p-6 to p-0 to remove padding */}
+        <main className="flex-1 p-0">{children}</main>
       </SidebarInset>
     </SidebarProvider>
   );

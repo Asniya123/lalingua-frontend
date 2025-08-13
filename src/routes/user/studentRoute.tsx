@@ -18,7 +18,9 @@ import RequireLanguage from "../../components/student/RequireLanguage";
 import TutorDetails from "../../Pages/User/TutorDetails";
 import Wallets from "../../Pages/User/wallets";
 import ChatPage from "../../Pages/User/Chat";
-import UserNotification from "../../components/student/chat/Notification";
+import AboutPage from "../../Pages/User/About";
+import ContactUsPage from "../../Pages/User/Contact";
+// import NotificationWrapper from "../../components/Notification/notificationWrapper";
 
 const StudentRoute = () => {
   return (
@@ -26,6 +28,8 @@ const StudentRoute = () => {
       {/* Public home page - accessible to everyone */}
       <Route path="/" element={<Layouts />}>
         <Route index element={<Home />} />
+        <Route path="/about" element={<AboutPage />} />
+        <Route path="/contact" element={<ContactUsPage />} />
       </Route>
 
       {/* Public routes - protected from authenticated users */}
@@ -52,7 +56,7 @@ const StudentRoute = () => {
             <Route path="/tutorDetail/:id" element={<TutorDetails />} />
             <Route path="/wallet" element={<Wallets />} />
             <Route path="/chat/:roomId?" element={<ChatPage />} />
-            <Route path="/notification" element={<UserNotification />} />
+            {/* <Route path="/notification" element={<NotificationWrapper />} /> */}
           </Route>
         </Route>
       </Route>

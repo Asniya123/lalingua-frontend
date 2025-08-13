@@ -98,7 +98,7 @@ const Signup: React.FC = () => {
         <div
           className="hidden md:block md:w-1/2 bg-cover bg-center"
           style={{
-            backgroundImage: "url('https://i.pinimg.com/736x/2a/44/28/2a442894aa80017dbefb684bf04685d9.jpg')",
+            backgroundImage: "url('src/assets/WhatsApp Image 2025-07-18 at 11.44.08.jpeg')",
           }}
         ></div>
 

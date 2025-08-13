@@ -1,11 +1,10 @@
+import React, { useState, useEffect } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { Globe, User, ChevronDown } from "lucide-react";
-import { useState, useEffect } from "react";
 import Cookies from "js-cookie";
 import { useDispatch, useSelector } from "react-redux";
 import { clearStudent } from "../../redux/slice/studentSlice";
 import { RootState } from "../../redux/store";
-import UserNotificationComponent from "../../components/student/chat/Notification";
 
 const navigation = [
   { name: "Home", href: "/" },
@@ -27,19 +26,18 @@ export function UserHeader() {
     const userToken = Cookies.get("userToken");
     const googleAuth = localStorage.getItem("googleAuth");
     const hasReduxUser = !!user;
-    
-    // User is logged in if they have either a token OR a Redux user object
+
     const isUserLoggedIn = !!userToken || hasReduxUser;
     const isGoogleUser = !!googleAuth;
-    
-    console.log("Auth Status Check:", { 
-      userToken, 
-      googleAuth, 
-      hasReduxUser, 
-      isUserLoggedIn, 
-      isGoogleUser 
+
+    console.log("Auth Status Check:", {
+      userToken,
+      googleAuth,
+      hasReduxUser,
+      isUserLoggedIn,
+      isGoogleUser,
     });
-    
+
     setIsLoggedIn(isUserLoggedIn);
     setIsGoogleSignIn(isGoogleUser);
   };
@@ -70,11 +68,11 @@ export function UserHeader() {
     }
   };
 
-  const handleLoginClick = (e) => {
+  const handleLoginClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     e.stopPropagation();
     console.log("Login button clicked");
-    
+
     try {
       navigate("/login");
       console.log("Navigate to /login called successfully");
@@ -84,11 +82,11 @@ export function UserHeader() {
     }
   };
 
-  const handleSignUpClick = (e) => {
+  const handleSignUpClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     e.stopPropagation();
     console.log("Sign up button clicked");
-    
+
     try {
       navigate("/register");
       console.log("Navigate to /register called successfully");
@@ -105,7 +103,7 @@ export function UserHeader() {
           <NavLink to="/" className="flex items-center gap-2 cursor-pointer">
             <img src="/src/assets/Logo.png" alt="Lingua Logo" className="h-16 w-20" />
           </NavLink>
-          
+
           <nav className="hidden md:flex items-center gap-8">
             {navigation.map((item) => (
               <NavLink
@@ -121,7 +119,7 @@ export function UserHeader() {
               </NavLink>
             ))}
           </nav>
-          
+
           <div className="flex items-center gap-4 relative">
             {/* Language Selector */}
             <button className="flex items-center gap-1 text-white">
@@ -129,10 +127,11 @@ export function UserHeader() {
               <span>En</span>
               <ChevronDown className="h-4 w-4" />
             </button>
-            
+
             {/* Notification Component - Only show when logged in */}
-            {(isLoggedIn || isGoogleSignIn) && <UserNotificationComponent />}
-            
+            {(isLoggedIn || isGoogleSignIn) 
+            }
+
             {/* Auth Section */}
             {!isLoggedIn && !isGoogleSignIn ? (
               <>
@@ -160,7 +159,7 @@ export function UserHeader() {
                   <User className="h-5 w-5 text-black" />
                   <ChevronDown className="h-4 w-4 text-black" />
                 </button>
-                
+
                 {dropdownOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-300 shadow-lg rounded-lg z-50">
                     <div className="flex flex-col">

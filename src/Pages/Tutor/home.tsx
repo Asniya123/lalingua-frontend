@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Star, Users, Book, TrendingUp } from 'lucide-react';
+import { Star, Users, Book, TrendingUp, Bell } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
 import { listCourses, listEnrolledStudents } from '../../services/tutorAuth';
@@ -11,26 +11,21 @@ const TutorDashboard = () => {
   const [selectedCourse, setSelectedCourse] = useState<ICourse | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'students' | 'reviews'>('overview');
   const [loading, setLoading] = useState<boolean>(false);
+  const [unreadNotifications, setUnreadNotifications] = useState<number>(0); // Placeholder for unread count
   const tutor = useSelector((state: RootState) => state.tutor.tutor) as Tutor | null;
-
-  
 
   const fetchTutorCourses = async () => {
     if (!tutor?._id) {
-     
       toast.error('Please log in to view your courses');
       return;
     }
 
-    
     setLoading(true);
 
     try {
-    
       const result = await listCourses(1, 10);
       
       if (!result.courses || !Array.isArray(result.courses)) {
-        
         toast.error('No courses available');
         setCourses([]);
         return;
@@ -43,29 +38,24 @@ const TutorDashboard = () => {
       const allStudentsResult = await listEnrolledStudents(tutor._id!);
       
       if (!allStudentsResult.success || !Array.isArray(allStudentsResult.students)) {
-        
         toast.error('Failed to load student data');
         return;
       }
 
       const validStudents = allStudentsResult.students || [];
-     
       const studentsByCourse = new Map<string, IEnrolledStudent[]>();
       validStudents.forEach((student) => {
         const courseId = student.courseId?.toString();
         if (courseId) {
           if (!studentsByCourse.has(courseId)) studentsByCourse.set(courseId, []);
           studentsByCourse.get(courseId)!.push(student);
-          
         }
       });
-     
 
       const coursesWithStudents = uniqueCourses.map((course) => {
         const courseId = course._id?.toString();
         const courseStudents = courseId ? studentsByCourse.get(courseId) || [] : [];
         
-
         const studentsWithReviews = courseStudents.filter(
           (student) =>
             student.review &&
@@ -73,7 +63,6 @@ const TutorDashboard = () => {
             student.review.rating !== null &&
             student.review.rating > 0
         );
-        
 
         const reviews = studentsWithReviews.map((student) => {
           const review = {
@@ -85,7 +74,6 @@ const TutorDashboard = () => {
             comment: student.review!.comment,
             createdAt: student.review!.createdAt || student.enrolledDate,
           };
-          
           return review as IDashboardReview;
         });
 
@@ -111,11 +99,9 @@ const TutorDashboard = () => {
           studentsWithReviews: studentsWithReviews.length,
           reviews: reviews,
         };
-       
         return courseWithData;
       });
 
-      
       setCourses(coursesWithStudents);
 
       const totalStudents = coursesWithStudents.reduce((sum, course) => sum + course.studentsEnrolled, 0);
@@ -129,13 +115,10 @@ const TutorDashboard = () => {
           ) / totalReviews
         : 0;
 
-      
-
       if (coursesWithStudents.length === 0) toast.info('No courses available');
       else if (totalStudents === 0) toast.info(`${coursesWithStudents.length} courses found, but no students enrolled yet`);
       else toast.success(`Dashboard loaded: ${coursesWithStudents.length} courses, ${totalStudents} students`);
     } catch (err) {
- 
       toast.error('Failed to fetch courses');
     } finally {
       setLoading(false);
@@ -144,32 +127,27 @@ const TutorDashboard = () => {
 
   useEffect(() => {
     if (tutor?._id) {
-     
       fetchTutorCourses();
     }
   }, [tutor]);
 
   const totalStudents = React.useMemo(() => {
     const total = courses.reduce((sum, course) => sum + (course.studentsEnrolled || 0), 0);
-    
     return total;
   }, [courses]);
 
   const totalFullRevenue = React.useMemo(() => {
     const total = courses.reduce((sum, course) => sum + (course.totalRevenue || 0), 0);
-   
     return total;
   }, [courses]);
 
   const totalTutorRevenue = React.useMemo(() => {
     const total = totalFullRevenue * 0.7;
-    
     return total;
   }, [totalFullRevenue]);
 
   const totalReviews = React.useMemo(() => {
     const total = courses.reduce((sum, course) => sum + (course.totalReviews || 0), 0);
-   
     return total;
   }, [courses]);
 
@@ -177,7 +155,6 @@ const TutorDashboard = () => {
     const totalRating = courses.reduce((sum, course) => sum + (course.averageRating || 0) * (course.totalReviews || 0), 0);
     const totalRev = courses.reduce((sum, course) => sum + (course.totalReviews || 0), 0);
     const avg = totalRev > 0 ? totalRating / totalRev : 0;
-    
     return avg;
   }, [courses]);
 
@@ -220,10 +197,7 @@ const TutorDashboard = () => {
         </div>
       </div>
       <button
-        onClick={() => {
-          
-          setSelectedCourse(course);
-        }}
+        onClick={() => setSelectedCourse(course)}
         className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
       >
         View Details
@@ -238,29 +212,26 @@ const TutorDashboard = () => {
           <h2 className="text-2xl font-bold text-gray-800">{course.courseTitle || 'Untitled Course'}</h2>
           <button onClick={() => setSelectedCourse(null)} className="text-gray-500 hover:text-gray-700 text-xl font-bold">✕</button>
         </div>
-       <div className="flex space-x-8 mt-4">
-  <button
-    onClick={() => setActiveTab('overview')}
-    className={`pb-2 border-b-2 ${activeTab === 'overview' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-600'}`}
-  >
-    Overview
-  </button>
-  <button
-    onClick={() => setActiveTab('students')}
-    className={`pb-2 border-b-2 ${activeTab === 'students' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-600'}`}
-  >
-    Students ({course.studentsEnrolled})
-  </button>
-  <button
-    onClick={() => {
-      
-      setActiveTab('reviews');
-    }}
-    className={`pb-2 border-b-2 ${activeTab === 'reviews' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-600'}`}
-  >
-    Reviews ({course.totalReviews || 0})
-  </button>
-</div>
+        <div className="flex space-x-8 mt-4">
+          <button
+            onClick={() => setActiveTab('overview')}
+            className={`pb-2 border-b-2 ${activeTab === 'overview' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-600'}`}
+          >
+            Overview
+          </button>
+          <button
+            onClick={() => setActiveTab('students')}
+            className={`pb-2 border-b-2 ${activeTab === 'students' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-600'}`}
+          >
+            Students ({course.studentsEnrolled})
+          </button>
+          <button
+            onClick={() => setActiveTab('reviews')}
+            className={`pb-2 border-b-2 ${activeTab === 'reviews' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-600'}`}
+          >
+            Reviews ({course.totalReviews || 0})
+          </button>
+        </div>
       </div>
       <div className="p-6">
         {activeTab === 'overview' && (
@@ -320,7 +291,6 @@ const TutorDashboard = () => {
                         {new Date(student.enrolledDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
                       </p>
                     </div>
-                    
                   </div>
                 ))}
               </div>
@@ -338,28 +308,25 @@ const TutorDashboard = () => {
               </div>
             ) : (
               <div className="space-y-4">
-                {course.reviews.map((review, index) => {
-                  
-                  return (
-                    <div key={review._id || `review-${index}`} className="border-b pb-6 last:border-b-0">
-                      <div className="flex justify-between items-start mb-2">
-                        <div>
-                          <p className="font-medium text-gray-800">{review.studentName || 'Anonymous Student'}</p>
-                          <p className="text-sm text-gray-600">
-                            {review.createdAt ? new Date(review.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'N/A'}
-                          </p>
-                        </div>
-                        <div className="flex items-center">
-                          {renderStars(review.rating || 0)}
-                          <span className="ml-2 text-sm font-medium text-gray-700">{review.rating || 0}/5</span>
-                        </div>
+                {course.reviews.map((review, index) => (
+                  <div key={review._id || `review-${index}`} className="border-b pb-6 last:border-b-0">
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <p className="font-medium text-gray-800">{review.studentName || 'Anonymous Student'}</p>
+                        <p className="text-sm text-gray-600">
+                          {review.createdAt ? new Date(review.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'N/A'}
+                        </p>
                       </div>
-                      {review.comment && (
-                        <p className="text-gray-700 mt-2 leading-relaxed">{review.comment}</p>
-                      )}
+                      <div className="flex items-center">
+                        {renderStars(review.rating || 0)}
+                        <span className="ml-2 text-sm font-medium text-gray-700">{review.rating || 0}/5</span>
+                      </div>
                     </div>
-                  );
-                })}
+                    {review.comment && (
+                      <p className="text-gray-700 mt-2 leading-relaxed">{review.comment}</p>
+                    )}
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -379,7 +346,21 @@ const TutorDashboard = () => {
               <p className="text-gray-600">Here's your teaching dashboard overview</p>
             </div>
           </div>
-          
+          <div className="relative">
+            <Bell
+              className="w-8 h-8 text-gray-600 hover:text-gray-800 cursor-pointer"
+              onClick={() => {
+                // Placeholder for notification panel toggle
+                toast.info('Notification panel clicked! Implement notification panel here.');
+                setUnreadNotifications(0); // Reset unread count on click (for demo)
+              }}
+            />
+            {unreadNotifications > 0 && (
+              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                {unreadNotifications}
+              </span>
+            )}
+          </div>
         </div>
 
         {loading ? (

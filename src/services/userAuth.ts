@@ -1,10 +1,10 @@
 import axios, { AxiosError } from "axios";
 import Cookies from "js-cookie";
-import Student, { ICourse, IEnrolledCourse, ILesson, IReview} from "../interfaces/user.js";
+import Student, { ContactFormData, ContactResponse, ICourse, IEnrolledCourse, ILesson, IReview} from "../interfaces/user.js";
 import API from "../api/axiosInstance.js";
 import { Icategory, ILanguage } from "../interfaces/admin.js";
 import { Wallet } from "../interfaces/wallet.js";
-import INotification from "../interfaces/notification.js";
+
 
 
 const COOKIE_EXPIRY_DAYS = 7;
@@ -522,6 +522,47 @@ export async function getStudentById(studentId: string): Promise<{ success: bool
     return {
       success: false,
       message: axiosError.response?.data?.message || "Failed to fetch student",
+    };
+  }
+}
+
+//Contact
+
+export async function submitContactForm(formData: ContactFormData): Promise<ContactResponse> {
+  try {
+    const response = await API.post("/contact", formData, {
+      headers: { "Content-Type": "application/json" },
+    });
+    return {
+      success: true,
+      message: response.data.message || "Message sent successfully",
+    };
+  } catch (error) {
+    const axiosError = error as AxiosError<{ message?: string }>;
+    console.error("Error submitting contact form:", axiosError.response?.data || axiosError.message);
+    return {
+      success: false,
+      message: axiosError.response?.data?.message || "Failed to send message",
+    };
+  }
+}
+
+export async function getContactMessages(): Promise<ContactResponse> {
+  try {
+    const response = await API.get("/contact", {
+      headers: { "Content-Type": "application/json" },
+    });
+    return {
+      success: true,
+      message: "Messages retrieved successfully",
+      data: response.data,
+    };
+  } catch (error) {
+    const axiosError = error as AxiosError<{ message?: string }>;
+    console.error("Error fetching contact messages:", axiosError.response?.data || axiosError.message);
+    return {
+      success: false,
+      message: axiosError.response?.data?.message || "Failed to fetch messages",
     };
   }
 }
